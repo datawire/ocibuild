@@ -119,6 +119,55 @@ func TestSquash(t *testing.T) {
 				{Name: "sym", Type: tar.TypeSymlink, Linkname: "foo"},
 			},
 		},
+		"opaque": {
+			Input: []TestLayer{
+				{
+					{Name: "dir/foo", Type: tar.TypeReg},
+				},
+				{
+					{Name: "dir/bar", Type: tar.TypeReg},
+					{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				{Name: "dir/bar", Type: tar.TypeReg},
+			},
+		},
+		"opaque-implicit-1": {
+			Input: []TestLayer{
+				{
+					{Name: "dir/foo", Type: tar.TypeReg},
+				},
+				{
+					{Name: "dir", Type: tar.TypeReg},
+				},
+				{
+					{Name: "dir/bar", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				{Name: "dir/bar", Type: tar.TypeReg},
+			},
+		},
+		"opaque-implicit-2": {
+			Input: []TestLayer{
+				{
+					{Name: "dir/foo", Type: tar.TypeReg},
+				},
+				{
+					{Name: "dir", Type: tar.TypeReg},
+				},
+				{
+					{Name: "dir", Type: tar.TypeDir},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/", Type: tar.TypeDir},
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+			},
+		},
 	}
 
 	for tcName, tc := range testcases {

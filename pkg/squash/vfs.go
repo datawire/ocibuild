@@ -54,6 +54,10 @@ func (f *fsfile) Get(child string) *fsfile {
 		if f.header != nil && f.header.Typeflag != tar.TypeDir {
 			f.header = nil
 			f.body = nil
+			f.Get(".wh..wh..opq").Set(&tar.Header{
+				Typeflag: tar.TypeReg,
+				Mode:     0644,
+			}, nil)
 		}
 		// Look up the child
 		if f.children == nil {
@@ -101,8 +105,6 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 		// we can't know if any given file was such a dir-to-non-dir conversion.
 		f.Get(".wh..wh..opq").Set(&tar.Header{
 			Typeflag: tar.TypeReg,
-			Name:     f.name + "/.wh..wh..opq",
-			Size:     0,
 			Mode:     0644,
 		}, nil)
 	}
@@ -157,7 +159,6 @@ func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
 		}
 		return iStr < jStr
 	})
-	fmt.Printf("childNames: %v\n", childNames)
 
 	for _, childName := range childNames {
 		child := f.children[childName]
