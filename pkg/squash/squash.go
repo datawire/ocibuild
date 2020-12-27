@@ -1,3 +1,4 @@
+// Package squash deals with squashing multiple layers together in to a single layer.
 package squash
 
 import (
