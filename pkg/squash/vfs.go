@@ -2,7 +2,6 @@ package squash
 
 import (
 	"archive/tar"
-	"fmt"
 	"path"
 	"sort"
 	"strings"
@@ -19,6 +18,16 @@ type fsfile struct {
 
 func fsGet(dir *fsfile, pathname string) *fsfile {
 	pathname = path.Clean(pathname)
+
+	// handle absolute paths
+	if path.IsAbs(pathname) {
+		for dir.parent != nil {
+			dir = dir.parent
+		}
+		pathname = pathname[1:]
+	}
+
+	// crawl the tree
 	for {
 		slash := strings.Index(pathname, "/")
 		if slash < 0 {
@@ -34,20 +43,13 @@ func fsGet(dir *fsfile, pathname string) *fsfile {
 }
 
 func (f *fsfile) Get(child string) *fsfile {
-	if strings.Contains(child, "/") {
-		panic(fmt.Errorf("invalid child name %q, .Get takes just a path segment", child))
-	}
-	if f.header != nil && f.header.Typeflag == tar.TypeSymlink {
-		target := fsGet(f.parent, f.header.Linkname)
-		if target != nil && target.header != nil {
-			return target.Get(child)
-		}
-	}
+	var ret *fsfile
+
 	switch child {
 	case "..":
-		return f.parent
+		ret = f.parent
 	case ".":
-		return f
+		ret = f
 	default:
 		// Accessing "foo/bar" implies that "foo" is a directory; if it isn't, then white it
 		// out.
@@ -69,17 +71,20 @@ func (f *fsfile) Get(child string) *fsfile {
 				parent: f,
 			}
 		}
-		// Resolve symlinks
-		ret := f.children[child]
-		for ret.header != nil && ret.header.Typeflag == tar.TypeSymlink {
-			target := fsGet(f, ret.header.Linkname)
-			if target != nil {
-				ret = target
-			}
-		}
-		// Return
-		return ret
+		ret = f.children[child]
 	}
+
+	// Resolve symlinks
+	for ret != nil && ret.header != nil && ret.header.Typeflag == tar.TypeSymlink {
+		target := fsGet(f, ret.header.Linkname)
+		if target == nil {
+			break
+		}
+		ret = target
+	}
+
+	// Return
+	return ret
 }
 
 func (f *fsfile) Set(hdr *tar.Header, body []byte) {

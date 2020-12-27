@@ -168,6 +168,81 @@ func TestSquash(t *testing.T) {
 				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
 			},
 		},
+		"symlink-1": {
+			Input: []TestLayer{
+				{
+					{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+				},
+				{
+					{Name: "foo", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "bar", Type: tar.TypeReg},
+				{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+			},
+		},
+		"symlink-2": {
+			Input: []TestLayer{
+				{
+					{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+				},
+				{
+					{Name: "foo", Type: tar.TypeSymlink, Linkname: "baz"},
+				},
+			},
+			Output: TestLayer{
+				{Name: "bar", Type: tar.TypeSymlink, Linkname: "baz"},
+				{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+			},
+		},
+		"symlink-3": {
+			Input: []TestLayer{
+				{
+					{Name: "dir", Type: tar.TypeDir},
+					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../tgt"},
+				},
+				{
+					{Name: "dir/lnk", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/", Type: tar.TypeDir},
+				{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../tgt"},
+				{Name: "tgt", Type: tar.TypeReg},
+			},
+		},
+		"symlink-4": {
+			Input: []TestLayer{
+				{
+					{Name: "dir", Type: tar.TypeDir},
+					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../../tgt"}, // outside of image
+				},
+				{
+					{Name: "dir/lnk", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/", Type: tar.TypeDir},
+				{Name: "dir/lnk", Type: tar.TypeReg},
+			},
+		},
+		"symlink-5": {
+			Input: []TestLayer{
+				{
+					{Name: "dir", Type: tar.TypeDir},
+					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "/tgt"},
+				},
+				{
+					{Name: "dir/lnk", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "dir/", Type: tar.TypeDir},
+				{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "/tgt"},
+				{Name: "tgt", Type: tar.TypeReg},
+			},
+		},
 	}
 
 	for tcName, tc := range testcases {
