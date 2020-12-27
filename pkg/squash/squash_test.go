@@ -44,8 +44,9 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 		}
 
 		ret = append(ret, TestFile{
-			Name: header.Name,
-			Type: header.Typeflag,
+			Name:     header.Name,
+			Type:     header.Typeflag,
+			Linkname: header.Linkname,
 		})
 	}
 
@@ -59,6 +60,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 		header := &tar.Header{
 			Name:     file.Name,
 			Typeflag: file.Type,
+			Linkname: file.Linkname,
 			Size:     0,
 			Mode:     0644,
 		}
@@ -91,14 +93,15 @@ func TestSquash(t *testing.T) {
 		"sanitize": {
 			Input: []TestLayer{
 				{
-					{Name: ".", Type: tar.TypeDir},                  // add trailing "/"
-					{Name: "./foo/bar", Type: tar.TypeReg},          // trim leading "./"
-					{Name: "foo/./baz", Type: tar.TypeReg},          // clean path
-					{Name: "foo/.aaa", Type: tar.TypeReg},           // sorted *after* the whiteout
-					{Name: "foo/../foo/.wh.qux", Type: tar.TypeReg}, // clean path; sorted before .aaa
-					{Name: "foo", Type: tar.TypeDir},                // add trailing "/"
-					{Name: "foo/d/x", Type: tar.TypeReg},            // masked by non-dir foo/d"
-					{Name: "foo/d", Type: tar.TypeReg},              // masks "foo/d/*"
+					{Name: ".", Type: tar.TypeDir},                     // add trailing "/"
+					{Name: "./foo/bar", Type: tar.TypeReg},             // trim leading "./"
+					{Name: "foo/./baz", Type: tar.TypeReg},             // clean path
+					{Name: "foo/.aaa", Type: tar.TypeReg},              // sorted *after* the whiteout
+					{Name: "foo/../foo/.wh.qux", Type: tar.TypeReg},    // clean path; sorted before .aaa
+					{Name: "foo", Type: tar.TypeDir},                   // add trailing "/"
+					{Name: "foo/bar/sub/../../zap", Type: tar.TypeReg}, // don't imply that bar is a dir
+					{Name: "foo/d/x", Type: tar.TypeReg},               // masked by non-dir foo/d"
+					{Name: "foo/d", Type: tar.TypeReg},                 // masks "foo/d/*"
 					{Name: "sym", Type: tar.TypeSymlink, Linkname: "foo"},
 					{Name: "sym/moved", Type: tar.TypeReg}, // symlink resolved to "foo/moved"
 				},
@@ -112,6 +115,7 @@ func TestSquash(t *testing.T) {
 				{Name: "foo/baz", Type: tar.TypeReg},
 				{Name: "foo/d", Type: tar.TypeReg},
 				{Name: "foo/moved", Type: tar.TypeReg},
+				{Name: "foo/zap", Type: tar.TypeReg},
 				{Name: "sym", Type: tar.TypeSymlink, Linkname: "foo"},
 			},
 		},
