@@ -16,7 +16,7 @@ import (
 // This is very similar to github.com/google/go-containerregistry/pkg/v1/mutate.Extract, however:
 //
 //  1. Includes whiteout markers in the output, since we don't assume to have the root layer.
-//  2. Squash properly implmenets "opaque whiteouts", which go-containerregistry doesn't support.
+//  2. Squash properly implements "opaque whiteouts", which go-containerregistry doesn't support.
 func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	root := &fsfile{
 		name: ".",

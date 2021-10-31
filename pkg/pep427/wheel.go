@@ -12,6 +12,7 @@ package pep427
 import (
 	"archive/zip"
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net/textproto"
@@ -20,7 +21,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/datawire/layertool/pkg/pep425"
+	//"github.com/datawire/layertool/pkg/pep425"
+	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/layertool/pkg/python"
 )
 
@@ -88,9 +90,7 @@ type Platform struct {
 	}
 
 	// For byte-compiling
-	Python sring // /usr/lib/python3
-
-	Mkdir func(string) error
+	Python string // /usr/lib/python3
 }
 
 func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) error {
@@ -151,27 +151,36 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 	if err != nil {
 		return err
 	}
-	dataDir := strings.TrimSuffix(distInfoDir, ".dist-info")+".data"
-	for name := range vfs {
-		parts := strings.Split(name, "/")
-		if len(parts) > 2 && parts[0] == dataDir {
-			var dstDataDir string
-			switch parts[1] {
-			case "purelib":
-				dstDataDir = plat.Target.PureLib
-			case "platlib":
-				dstDataDir = plat.Target.PlatLib
-			case "headers":
-				dstDataDir = plat.Target.Headers
-			case "scripts":
-				dstDataDir = plat.Target.Scripts
-			case "data":
-				dstDataDir = plat.Target.Data
-			}
-			if
-			parts := strings.SplitN(strings.TrimPrefix(name, dataDir+"/"), "/", 2)
+	dataDir := path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data")
+	for fullName := range vfs {
+		if !strings.HasPrefix(fullName, dataDir+"/") {
+			continue
+		}
+		relName := strings.TrimPrefix(fullName, dataDir+"/")
+		parts := strings.SplitN(relName, "/", 2)
+		key := parts[0]
+		var rest string
+		if len(parts) > 1 {
+			rest = parts[1]
+		}
 
-			path.Join(plat.Target.
+		var dstDataDir string
+		switch key {
+		case "purelib":
+			dstDataDir = plat.Target.PureLib
+		case "platlib":
+			dstDataDir = plat.Target.PlatLib
+		case "headers":
+			dstDataDir = plat.Target.Headers
+		case "scripts":
+			dstDataDir = plat.Target.Scripts
+		case "data":
+			dstDataDir = plat.Target.Data
+		default:
+			return fmt.Errorf("IDK what do do with %q", path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
+		}
+		vfs[path.Join(dstDataDir, rest)] = vfs[fullName]
+		delete(vfs, fullName)
 	}
 	//   3. If applicable, update scripts starting with `#!python` to point to the correct
 	//      interpreter.
