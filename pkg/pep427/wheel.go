@@ -1,6 +1,12 @@
 // Package pep427 implements Python PEP 427 -- The Wheel Binary Package Format 1.0.
 //
 // https://www.python.org/dev/peps/pep-0427/
+//
+// Other useful references:
+// - distutils/command/install.py
+// - site-packages/pip/_internal/operations/install/wheel.py
+// - site-packages/pip/_internal/utils/unpacking.py
+// - site-packages/pip/_internal/utils/wheel.py
 package pep427
 
 import (
@@ -71,10 +77,12 @@ type Platform struct {
 		// For shebangs
 		Python string // /usr/lib/python3
 
-		// Installation directories
+		// Installation directories: These are the directories described in
+		// distutils.command.install.SCHEME_KEYS and
+		// distutils.command.install.INSTALL_SCHEMES.
 		PureLib string // /usr/lib/python3.9/site-packages
 		PlatLib string // /usr/lib64/python3.9/site-packages
-		Headers string // /usr/include/python3.9/$name/
+		Headers string // /usr/include/python3.9/$name/ (e.g. $name=cpython)
 		Scripts string // /usr/bin
 		Data    string // /usr
 	}
@@ -85,7 +93,7 @@ type Platform struct {
 	Mkdir func(string) error
 }
 
-func InstallWheel(ctx context.Context, wheelfilename string) error {
+func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) error {
 	zipReader, err := zip.OpenReader(wheelfilename)
 	if err != nil {
 		return err
@@ -119,10 +127,17 @@ func InstallWheel(ctx context.Context, wheelfilename string) error {
 	if vercmp(wheelVersion, specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
 	}
+	//   3. If Root-Is-Purelib == 'true', unpack archive into purelib (site-packages).
+	//   4. Else unpack archive into platlib (site-packages).
+	var dstDir string
 	if metadata.Get("Root-Is-Purelib") == "true" {
-		//   3. If Root-Is-Purelib == 'true', unpack archive into purelib (site-packages).
+		dstDir = plat.Target.PureLib
 	} else {
-		//   4. Else unpack archive into platlib (site-packages).
+		dstDir = plat.Target.PlatLib
+	}
+	vfs := make(map[string]*zip.File)
+	for _, file := range wh.zip.File {
+		vfs[path.Join(dstDir, file.FileHeader.Name)] = file
 	}
 	// - Spread.
 	//   1. Unpacked archive includes `distribution-1.0.dist-info/` and (if there is data)
@@ -132,6 +147,32 @@ func InstallWheel(ctx context.Context, wheelfilename string) error {
 	//      directories, such as
 	//      `distribution-1.0.data/(purelib|platlib|headers|scripts|data)`. The initially
 	//      supported paths are taken from `distutils.command.install`.
+	distInfoDir, err := wh.distInfoDir()
+	if err != nil {
+		return err
+	}
+	dataDir := strings.TrimSuffix(distInfoDir, ".dist-info")+".data"
+	for name := range vfs {
+		parts := strings.Split(name, "/")
+		if len(parts) > 2 && parts[0] == dataDir {
+			var dstDataDir string
+			switch parts[1] {
+			case "purelib":
+				dstDataDir = plat.Target.PureLib
+			case "platlib":
+				dstDataDir = plat.Target.PlatLib
+			case "headers":
+				dstDataDir = plat.Target.Headers
+			case "scripts":
+				dstDataDir = plat.Target.Scripts
+			case "data":
+				dstDataDir = plat.Target.Data
+			}
+			if
+			parts := strings.SplitN(strings.TrimPrefix(name, dataDir+"/"), "/", 2)
+
+			path.Join(plat.Target.
+	}
 	//   3. If applicable, update scripts starting with `#!python` to point to the correct
 	//      interpreter.
 	//   4. Update `distribution-1.0.dist-info/RECORD` with the installed paths.
