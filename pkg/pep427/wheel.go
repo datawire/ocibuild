@@ -21,8 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	//"github.com/datawire/layertool/pkg/pep425"
 	"github.com/datawire/dlib/dlog"
+
+	//"github.com/datawire/layertool/pkg/pep425"
 	"github.com/datawire/layertool/pkg/python"
 )
 

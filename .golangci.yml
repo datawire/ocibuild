@@ -1,0 +1,15 @@
+linters:
+  enable:
+    - gci
+    - nolintlint
+linters-settings:
+  goimports:
+    local-prefixes: github.com/datawire/layertool
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: false
+    require-explanation: true
+    require-specific: true
+    allow-no-explanation:
+      - deadcode
+      - varcheck

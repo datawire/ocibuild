@@ -166,6 +166,8 @@ func (pm StatMode) String() string {
 type StatFileAttribute uint32
 
 // https://docs.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants
+//
+//nolint:deadcode,varcheck
 const (
 	// 1<<0 through 1<<7
 	FileAttributeReadonly  StatFileAttribute = StatFileAttribute(DOSReadOnly)

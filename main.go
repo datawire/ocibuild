@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/datawire/dlib/dlog"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/spf13/cobra"
 
-	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/layertool/pkg/cliutil"
 )
 
