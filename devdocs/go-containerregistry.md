@@ -37,21 +37,32 @@ go-containerregistry uses
     and "[distribution-spec][]"; the "[runtime-spec][]" is
     out-of-scope.
 
-     + `./pkg/v1/cache`
-     + `./pkg/v1/daemon`
-     + `./pkg/v1/empty`
+    Ways that images are represented:
+
+     + `./pkg/v1/daemon`: In a running Docker daemon
+     + `./pkg/v1/remote`: In a remote Docker registry
+        - `./pkg/v1/remote/transport`
+     + `./pkg/v1/layout`: As a directory on a filesystem
+     + `./pkg/v1/tarball`: As a tarball
+
+    Plus some utilities for testing:
+
      + `./pkg/v1/fake`
+     + `./pkg/v1/random`
+
+    Utilities:
+
+     + `./pkg/v1/empty`: `empty.Image` is the `FROM scratch` image
+     + `./pkg/v1/cache`: Layer cache
+
+    Other:
+
      + `./pkg/v1/google`
-     + `./pkg/v1/layout`
      + `./pkg/v1/match`
      + `./pkg/v1/mutate`
      + `./pkg/v1/partial`
-     + `./pkg/v1/random`
-     + `./pkg/v1/remote`
-        - `./pkg/v1/remote/transport`
      + `./pkg/v1/static`
      + `./pkg/v1/stream`
-     + `./pkg/v1/tarball`
      + `./pkg/v1/types`
      + `./pkg/v1/validate`
 

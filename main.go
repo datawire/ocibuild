@@ -31,7 +31,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := argparser.ExecuteContext(ctx); err != nil {
-		fmt.Fprintf(argparser.ErrOrStderr(), "%s: error: %v", argparser.CommandPath(), err)
+		fmt.Fprintf(argparser.ErrOrStderr(), "%s: error: %v\n", argparser.CommandPath(), err)
 		os.Exit(1)
 	}
 }

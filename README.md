@@ -52,7 +52,12 @@ docker push docker.io/datawire/layertool-example:latest
 ```
 
 ```bash
-crane push
+layertool image \
+  --base=<(crane pull gcr.io/distroless/static:nonroot) \
+  <(layertool go ./cmd/go-program) \
+  | docker load
+docker push docker.io/datawire/layertool-example:latest
+```
 
 [`crane`]: https://pkg.go.dev/github.com/google/go-containerregistry/cmd/crane
 [`ko`]: https://github.com/google/ko

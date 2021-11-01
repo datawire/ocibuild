@@ -1,1 +1,8 @@
+# `go mod vendor`
 vendor/
+
+# Files that humans are liable to create during development.
+bin/
+*.whl
+*.tar
+*.log
