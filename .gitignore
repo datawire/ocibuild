@@ -1,3 +1,9 @@
+# `go build .`
+layertool
+
+# `go test`
+*.test
+
 # `go mod vendor`
 vendor/
 

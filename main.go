@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/layertool/pkg/cliutil"
 )
 
@@ -29,6 +31,10 @@ func init() {
 
 func main() {
 	ctx := context.Background()
+
+	logs.Warn = dlog.StdLogger(ctx, dlog.LogLevelWarn)
+	logs.Progress = dlog.StdLogger(ctx, dlog.LogLevelInfo)
+	logs.Debug = dlog.StdLogger(ctx, dlog.LogLevelDebug)
 
 	if err := argparser.ExecuteContext(ctx); err != nil {
 		fmt.Fprintf(argparser.ErrOrStderr(), "%s: error: %v\n", argparser.CommandPath(), err)

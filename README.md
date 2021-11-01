@@ -35,9 +35,12 @@ crane push \
   docker.io/datawire/layertool-example:latest
 ```
 
-Now, in actual use you probably wouldn't want to make as heavy use
+Now, in actual use you probably wouldn't want to make as heavy use of
 process substitution, and instead cache things to files, in order to
-better support incremental builds.
+better support incremental builds.  Also, working with pipes instead
+of regular files uses more memory, because the whole file must be kept
+in memory after reading it, rather than being able to seek around on
+disk.
 
 ### `ko`
 

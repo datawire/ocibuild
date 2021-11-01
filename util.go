@@ -11,12 +11,31 @@ import (
 )
 
 func PathOpener(filename string) tarball.Opener {
-	bs, err := os.ReadFile(filename)
-	return func() (io.ReadCloser, error) {
-		if err != nil {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return func() (io.ReadCloser, error) {
 			return nil, err
 		}
-		return io.NopCloser(bytes.NewReader(bs)), nil
+	}
+	if fi.Mode().IsRegular() {
+		// Open the file for each access.  This does not work on pipes.
+		return func() (io.ReadCloser, error) {
+			file, err := os.Open(filename)
+			if err != nil {
+				return nil, err
+			}
+			return file, nil
+		}
+	} else {
+		// Read the file in to memory once, and then work on that.  This avoids extra IO,
+		// but uses more memory.
+		bs, err := os.ReadFile(filename)
+		return func() (io.ReadCloser, error) {
+			if err != nil {
+				return nil, err
+			}
+			return io.NopCloser(bytes.NewReader(bs)), nil
+		}
 	}
 }
 
