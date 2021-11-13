@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/datawire/layertool/pkg/cliutil"
+	"github.com/datawire/ocibuild/pkg/cliutil"
 )
 
 func TestHelpTemplate(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
 
-	"github.com/datawire/layertool/pkg/squash"
+	"github.com/datawire/ocibuild/pkg/squash"
 )
 
 func init() {

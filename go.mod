@@ -1,4 +1,4 @@
-module github.com/datawire/layertool
+module github.com/datawire/ocibuild
 
 go 1.17
 

@@ -19,7 +19,7 @@ import (
 
 	"github.com/datawire/dlib/dlog"
 
-	"github.com/datawire/layertool/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python"
 )
 
 //

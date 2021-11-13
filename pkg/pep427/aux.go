@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/datawire/layertool/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python"
 )
 
 type version []int

@@ -1,13 +1,13 @@
 # Overview of go-containerregistry
 
-`layertool` makes uses of the `github.com/google/go-containerregistry`
+`ocibuild` makes uses of the `github.com/google/go-containerregistry`
 library, and pairs well with the `crane` CLI tool that is part of
 go-containerregistry.
 
 go-containerregistry is a little unapproachable, but if you're working
-on layertool, you'll want to be familiar with go-containerregistry.
-So this document attempts to be just enough of an introduction to
-point you in the right direction.
+on ocibuild, you'll want to be familiar with go-containerregistry.  So
+this document attempts to be just enough of an introduction to point
+you in the right direction.
 
 ## Common
 

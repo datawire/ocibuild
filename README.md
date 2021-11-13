@@ -1,8 +1,8 @@
-# layertool
+# ocibuild
 
-`layertool` is a command-line tool for manipulating Docker image
-layers as files.  It pairs well with the [`crane`][] tool for
-interacting with remote Docker images and registries.
+`ocibuild` is a command-line tool for manipulating Docker image layers
+as files.  It pairs well with the [`crane`][] tool for interacting
+with remote Docker images and registries.
 
 ## Examples
 
@@ -24,15 +24,15 @@ sure :P
 
 ```bash
 crane push \
-  <(layertool image \
+  <(ocibuild image \
       --base=<(crane pull docker.io/alpine:latest /dev/stdout) \
-      <(layertool squash \
-          <(layertool wheel <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
-          <(layertool wheel <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
-      <(layertool squash \
-          <(layertool wheel ./python/mypackage.whl) \
-          <(layertool go ./cmd/go-program-that-calls-python))) \
-  docker.io/datawire/layertool-example:latest
+      <(ocibuild squash \
+          <(ocibuild wheel <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
+          <(ocibuild wheel <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
+      <(ocibuild squash \
+          <(ocibuild wheel ./python/mypackage.whl) \
+          <(ocibuild go ./cmd/go-program-that-calls-python))) \
+  docker.io/datawire/ocibuild-example:latest
 ```
 
 Now, in actual use you probably wouldn't want to make as heavy use of
@@ -46,27 +46,27 @@ In ([Emissary's][Emissary] style of) Make, this example would look
 more like
 
 ```Makefile
-layertool-example.img.tar: $(tools/layertool) base.img.tar python-deps.layer.tar my-code.layer.tar
-	$(tools/layertool) image --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
+ocibuild-example.img.tar: $(tools/ocibuild) base.img.tar python-deps.layer.tar my-code.layer.tar
+	$(tools/ocibuild) image --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
 
 base.img.tar: $(tools/crane)
 	$(tools/crane) pull docker.io/alpine:latest >$@
 
-%.whl.layer.tar: %.whl $(tools/layertool)
-	$(tools/layertool) wheel $< >$@
+%.whl.layer.tar: %.whl $(tools/ocibuild)
+	$(tools/ocibuild) wheel $< >$@
 
 pypi.urllib-1.26,7-py2.py3-none-any     = af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744
 pypi.beautifulsoup4-4.10.0-py3-none-any = 69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417
 pypi-downloads/%.whl:
 	curl https://files.pythonhosted.org/packages/$(pypi.$*)/$*.whl >$@
-my-pydeps.layer.tar: $(tools/layertool) $(patsubst pypi.%,pypi-downloads/%.whl.layer.tar,$(filter pypi.%,$(.VARIABLES)))
-	$(tools/layertool) squash $(filter %.layer.tar,$^) >$@
+my-pydeps.layer.tar: $(tools/ocibuild) $(patsubst pypi.%,pypi-downloads/%.whl.layer.tar,$(filter pypi.%,$(.VARIABLES)))
+	$(tools/ocibuild) squash $(filter %.layer.tar,$^) >$@
 
-my-go.layer.tar: $(tools/layertool) $(tools/write-ifchanged) FORCE
-	$(tools/layertool) go ./cmd/go-program-that-call-python | $(tools/write-ifchanged) $@
+my-go.layer.tar: $(tools/ocibuild) $(tools/write-ifchanged) FORCE
+	$(tools/ocibuild) go ./cmd/go-program-that-call-python | $(tools/write-ifchanged) $@
 
-my-code.layer.tar: $(tools/layertool) my-go.layer.tar python/mypackage.whl.layer.tar
-	$(tools/layertool) squash $(filter %.layer.tar,$^) >$@
+my-code.layer.tar: $(tools/ocibuild) my-go.layer.tar python/mypackage.whl.layer.tar
+	$(tools/ocibuild) squash $(filter %.layer.tar,$^) >$@
 ```
 
 ### `ko`
@@ -77,16 +77,16 @@ image, but we're just going to look at the building-an-image part of
 `ko`'s functionality.
 
 ```bash
-docker tag "$(ko publish --local ./cmd/go-program)" docker.io/datawire/layertool-example:latest
-docker push docker.io/datawire/layertool-example:latest
+docker tag "$(ko publish --local ./cmd/go-program)" docker.io/datawire/ocibuild-example:latest
+docker push docker.io/datawire/ocibuild-example:latest
 ```
 
 ```bash
-layertool image \
+ocibuild image \
   --base=<(crane pull gcr.io/distroless/static:nonroot) \
-  <(layertool go ./cmd/go-program) \
+  <(ocibuild go ./cmd/go-program) \
   | docker load
-docker push docker.io/datawire/layertool-example:latest
+docker push docker.io/datawire/ocibuild-example:latest
 ```
 
 [`crane`]: https://pkg.go.dev/github.com/google/go-containerregistry/cmd/crane

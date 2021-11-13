@@ -1,7 +1,7 @@
-build: layertool
+build: ocibuild
 .PHONY: build
 
-layertool: FORCE
+ocibuild: FORCE
 	go build .
 
 check:

@@ -1,5 +1,5 @@
 # `go build .`
-layertool
+ocibuild
 
 # `go test`
 *.test

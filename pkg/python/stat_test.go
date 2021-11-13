@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/datawire/layertool/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python"
 )
 
 func TestStatModeString(t *testing.T) {

@@ -1,4 +1,4 @@
-// Command layertool deals with manipulation of Docker layer files.
+// Command ocibuild deals with manipulation of Docker layer files.
 package main
 
 import (
@@ -10,11 +10,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/spf13/cobra"
 
-	"github.com/datawire/layertool/pkg/cliutil"
+	"github.com/datawire/ocibuild/pkg/cliutil"
 )
 
 var argparser = &cobra.Command{
-	Use:   "layertool {[flags]|SUBCOMMAND...}",
+	Use:   "ocibuild {[flags]|SUBCOMMAND...}",
 	Short: "Manipulate Docker layers as files",
 
 	Args: cliutil.OnlySubcommands,
