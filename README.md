@@ -4,6 +4,47 @@
 as files.  It pairs well with the [`crane`][] tool for interacting
 with remote Docker images and registries.
 
+## Documentation
+
+Read the command documentation right here in your web browser or text
+editor at [`./userdocs/`][], or in your terminal with `man ocibuild`
+or `ocibuild --help`.
+
+## Installation
+
+### Minimal install
+
+If you want just the executable binary (for CI or as an
+automatically-downloaded component in your larger build system), you
+can grab it the usual `go get` way:
+
+```shell
+go get github.com/datawire/ocibuild
+```
+
+### Complete install
+
+If you want not just the executable, but also shell completion and
+man-pages and whatnot, clone the repo, and run `make install`.  It
+understands `DESTDIR` and `prefix` `bindir` and everything else that
+37 years of GNU has made you come to expect.  No `./configure`
+nescessary!
+
+```shell
+git clone https://github.com/datawire/ocibuild
+cd ocibuild
+make build
+sudo make install prefix=/usr
+```
+
+or
+
+```shell
+git clone https://github.com/datawire/ocibuild
+cd ocibuild
+make install prefix=$HOME/.local
+```
+
 ## Examples
 
 ### Complex example
@@ -76,10 +117,14 @@ cool stuff with Kubernetes manifests making use of the resulting
 image, but we're just going to look at the building-an-image part of
 `ko`'s functionality.
 
+Given the `ko` recipe
+
 ```bash
 docker tag "$(ko publish --local ./cmd/go-program)" docker.io/datawire/ocibuild-example:latest
 docker push docker.io/datawire/ocibuild-example:latest
 ```
+
+It is more-or-less equivalent to use this `ocibuild` recipe:
 
 ```bash
 ocibuild image \
@@ -92,3 +137,4 @@ docker push docker.io/datawire/ocibuild-example:latest
 [`crane`]: https://pkg.go.dev/github.com/google/go-containerregistry/cmd/crane
 [`ko`]: https://github.com/google/ko
 [Emissary]: https://github.com/emissary-ingress/emissary
+[`./userdocs/`]: ./userdocs/
