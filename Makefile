@@ -21,6 +21,7 @@ build: completion.bash
 build: completion.fish
 build: completion.zsh
 build: man
+build: userdocs
 .PHONY: build
 
 .$(name).stamp: FORCE
@@ -31,6 +32,13 @@ completion.%: $(name) main_aux.go
 	go run -tags=aux . completion $* > $@
 man: $(name) main_aux.go
 	go run -tags=aux . man $@ || { r=$$?; rm -rf $@; exit $$r; }
+userdocs: $(name) main_aux.go
+	go run -tags=aux . mddoc $@ || { r=$$?; rm -rf $@; exit $$r; }
+
+# Generate
+
+generate: userdocs
+.PHONY: generate
 
 # Install
 

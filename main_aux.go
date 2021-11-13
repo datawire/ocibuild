@@ -43,4 +43,27 @@ func init() {
 			return nil
 		},
 	})
+
+	// mddoc
+	argparser.AddCommand(&cobra.Command{
+		Hidden: true,
+		Use:    "mddoc OUT_DIRECTORY",
+		Short:  "Generate markdown documentation",
+		Args:   cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir := args[0]
+			if err := os.RemoveAll(dir); err != nil {
+				return err
+			}
+			if err := os.MkdirAll(dir, 0777); err != nil {
+				return err
+			}
+			root := cmd.Root()
+			root.DisableAutoGenTag = true
+			if err := doc.GenMarkdownTree(root, dir); err != nil {
+				return err
+			}
+			return nil
+		},
+	})
 }
