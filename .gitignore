@@ -1,3 +1,7 @@
+# Makefile
+.*.stamp
+completion.*
+
 # `go build .`
 ocibuild
 

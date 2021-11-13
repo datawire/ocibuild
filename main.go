@@ -23,6 +23,10 @@ var (
 
 		SilenceErrors: true, // main() will handle this after .ExecuteContext() returns
 		SilenceUsage:  true, // our FlagErrorFunc will handle it
+
+		CompletionOptions: cobra.CompletionOptions{
+			DisableDefaultCmd: true,
+		},
 	}
 	argparserImage = &cobra.Command{
 		Use:   "image {[flags]|SUBCOMMAND...}",
