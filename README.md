@@ -42,6 +42,33 @@ of regular files uses more memory, because the whole file must be kept
 in memory after reading it, rather than being able to seek around on
 disk.
 
+In ([Emissary's][Emissary] style of) Make, this example would look
+more like
+
+```Makefile
+layertool-example.img.tar: $(tools/layertool) base.img.tar python-deps.layer.tar my-code.layer.tar
+	$(tools/layertool) image --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
+
+base.img.tar: $(tools/crane)
+	$(tools/crane) pull docker.io/alpine:latest >$@
+
+%.whl.layer.tar: %.whl $(tools/layertool)
+	$(tools/layertool) wheel $< >$@
+
+pypi.urllib-1.26,7-py2.py3-none-any     = af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744
+pypi.beautifulsoup4-4.10.0-py3-none-any = 69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417
+pypi-downloads/%.whl:
+	curl https://files.pythonhosted.org/packages/$(pypi.$*)/$*.whl >$@
+my-pydeps.layer.tar: $(tools/layertool) $(patsubst pypi.%,pypi-downloads/%.whl.layer.tar,$(filter pypi.%,$(.VARIABLES)))
+	$(tools/layertool) squash $(filter %.layer.tar,$^) >$@
+
+my-go.layer.tar: $(tools/layertool) $(tools/write-ifchanged) FORCE
+	$(tools/layertool) go ./cmd/go-program-that-call-python | $(tools/write-ifchanged) $@
+
+my-code.layer.tar: $(tools/layertool) my-go.layer.tar python/mypackage.whl.layer.tar
+	$(tools/layertool) squash $(filter %.layer.tar,$^) >$@
+```
+
 ### `ko`
 
 The [`ko`][] tool "Dockerifies" a Go program.  `ko` can also do some
