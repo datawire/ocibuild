@@ -13,7 +13,7 @@ import (
 func init() {
 	var argBase string
 	cmd := &cobra.Command{
-		Use:   "image [flags] IN_LAYERFILES... >OUT_IMAGEFILE",
+		Use:   "build [flags] IN_LAYERFILES... >OUT_IMAGEFILE",
 		Short: "Combine layers in to a complete image",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(flags *cobra.Command, args []string) error {
@@ -47,5 +47,5 @@ func init() {
 	}
 	cmd.Flags().StringVar(&argBase, "base", "", "Use `IN_IMAGEFILE` as the base of the image")
 
-	argparser.AddCommand(cmd)
+	argparserImage.AddCommand(cmd)
 }

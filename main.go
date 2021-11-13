@@ -1,4 +1,4 @@
-// Command ocibuild deals with manipulation of Docker layer files.
+// Command ocibuild deals with manipulation of OCI/Docker images and layers as regular files.
 package main
 
 import (
@@ -13,20 +13,38 @@ import (
 	"github.com/datawire/ocibuild/pkg/cliutil"
 )
 
-var argparser = &cobra.Command{
-	Use:   "ocibuild {[flags]|SUBCOMMAND...}",
-	Short: "Manipulate Docker layers as files",
+var (
+	argparser = &cobra.Command{
+		Use:   "ocibuild {[flags]|SUBCOMMAND...}",
+		Short: "Manipulate OCI/Docker images and layers as regular files",
 
-	Args: cliutil.OnlySubcommands,
-	RunE: cliutil.RunSubcommands,
+		Args: cliutil.OnlySubcommands,
+		RunE: cliutil.RunSubcommands,
 
-	SilenceErrors: true, // main() will handle this after .ExecuteContext() returns
-	SilenceUsage:  true, // our FlagErrorFunc will handle it
-}
+		SilenceErrors: true, // main() will handle this after .ExecuteContext() returns
+		SilenceUsage:  true, // our FlagErrorFunc will handle it
+	}
+	argparserImage = &cobra.Command{
+		Use:   "image {[flags]|SUBCOMMAND...}",
+		Short: "Manipulate complete images",
+
+		Args: cliutil.OnlySubcommands,
+		RunE: cliutil.RunSubcommands,
+	}
+	argparserLayer = &cobra.Command{
+		Use:   "layer {[flags]|SUBCOMMAND...}",
+		Short: "Manipulate individual layers for use in an image",
+
+		Args: cliutil.OnlySubcommands,
+		RunE: cliutil.RunSubcommands,
+	}
+)
 
 func init() {
 	argparser.SetFlagErrorFunc(cliutil.FlagErrorFunc)
 	argparser.SetHelpTemplate(cliutil.HelpTemplate)
+	argparser.AddCommand(argparserImage)
+	argparser.AddCommand(argparserLayer)
 }
 
 func main() {

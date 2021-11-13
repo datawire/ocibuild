@@ -40,5 +40,5 @@ func init() {
 			return nil
 		},
 	}
-	argparser.AddCommand(cmd)
+	argparserLayer.AddCommand(cmd)
 }

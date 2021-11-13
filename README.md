@@ -24,14 +24,14 @@ sure :P
 
 ```bash
 crane push \
-  <(ocibuild image \
+  <(ocibuild image build \
       --base=<(crane pull docker.io/alpine:latest /dev/stdout) \
-      <(ocibuild squash \
-          <(ocibuild wheel <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
-          <(ocibuild wheel <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
-      <(ocibuild squash \
-          <(ocibuild wheel ./python/mypackage.whl) \
-          <(ocibuild go ./cmd/go-program-that-calls-python))) \
+      <(ocibuild layer squash \
+          <(ocibuild layer wheel <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
+          <(ocibuild layer wheel <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
+      <(ocibuild layer squash \
+          <(ocibuild layer wheel ./python/mypackage.whl) \
+          <(ocibuild layer go ./cmd/go-program-that-calls-python))) \
   docker.io/datawire/ocibuild-example:latest
 ```
 
@@ -47,26 +47,26 @@ more like
 
 ```Makefile
 ocibuild-example.img.tar: $(tools/ocibuild) base.img.tar python-deps.layer.tar my-code.layer.tar
-	$(tools/ocibuild) image --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
+	$(tools/ocibuild) image build --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
 
 base.img.tar: $(tools/crane)
 	$(tools/crane) pull docker.io/alpine:latest >$@
 
 %.whl.layer.tar: %.whl $(tools/ocibuild)
-	$(tools/ocibuild) wheel $< >$@
+	$(tools/ocibuild) layer wheel $< >$@
 
 pypi.urllib-1.26,7-py2.py3-none-any     = af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744
 pypi.beautifulsoup4-4.10.0-py3-none-any = 69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417
 pypi-downloads/%.whl:
 	curl https://files.pythonhosted.org/packages/$(pypi.$*)/$*.whl >$@
 my-pydeps.layer.tar: $(tools/ocibuild) $(patsubst pypi.%,pypi-downloads/%.whl.layer.tar,$(filter pypi.%,$(.VARIABLES)))
-	$(tools/ocibuild) squash $(filter %.layer.tar,$^) >$@
+	$(tools/ocibuild) layer squash $(filter %.layer.tar,$^) >$@
 
 my-go.layer.tar: $(tools/ocibuild) $(tools/write-ifchanged) FORCE
-	$(tools/ocibuild) go ./cmd/go-program-that-call-python | $(tools/write-ifchanged) $@
+	$(tools/ocibuild) layer go ./cmd/go-program-that-call-python | $(tools/write-ifchanged) $@
 
 my-code.layer.tar: $(tools/ocibuild) my-go.layer.tar python/mypackage.whl.layer.tar
-	$(tools/ocibuild) squash $(filter %.layer.tar,$^) >$@
+	$(tools/ocibuild) layer squash $(filter %.layer.tar,$^) >$@
 ```
 
 ### `ko`
@@ -84,7 +84,7 @@ docker push docker.io/datawire/ocibuild-example:latest
 ```bash
 ocibuild image \
   --base=<(crane pull gcr.io/distroless/static:nonroot) \
-  <(ocibuild go ./cmd/go-program) \
+  <(ocibuild layer go ./cmd/go-program) \
   | docker load
 docker push docker.io/datawire/ocibuild-example:latest
 ```
