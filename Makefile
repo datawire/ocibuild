@@ -6,6 +6,8 @@ exec_prefix ?= $(prefix)
 bindir      ?= $(prefix)/bin
 datarootdir ?= $(prefix)/share
 datadir     ?= $(datarootdir)
+mandir      ?= $(datarootdir)/man
+man1dir     ?= $(mandir)/man1
 
 bash_completion_dir ?= $(datadir)/bash-completion/completions
 fish_completion_dir ?= $(datadir)/fish/completions
@@ -18,6 +20,7 @@ build: $(name)
 build: completion.bash
 build: completion.fish
 build: completion.zsh
+build: man
 .PHONY: build
 
 .$(name).stamp: FORCE
@@ -26,6 +29,8 @@ $(name): .$(name).stamp tools/bin/copy-ifchanged
 	tools/bin/copy-ifchanged $< $@
 completion.%: $(name) main_aux.go
 	go run -tags=aux . completion $* > $@
+man: $(name) main_aux.go
+	go run -tags=aux . man $@ || { r=$$?; rm -rf $@; exit $$r; }
 
 # Install
 
@@ -33,6 +38,7 @@ install: $(DESTDIR)$(bindir)/$(name)
 install: $(DESTDIR)$(bash_completion_dir)/$(name)
 install: $(DESTDIR)$(fish_completion_dir)/$(name).fish
 install: $(DESTDIR)$(zsh_completion_dir)/_$(name)
+install: install-man
 .PHONY: install
 
 $(DESTDIR)$(bindir)/$(name): $(name)
@@ -43,6 +49,10 @@ $(DESTDIR)$(fish_completion_dir)/$(name).fish: completion.fish
 	install -Dm644 $< $@
 $(DESTDIR)$(zsh_completion_dir)/_$(name): completion.zsh
 	install -Dm644 $< $@
+
+install-man: man
+	install -Dm644 -t $(DESTDIR)$(man1dir) man/*.1
+.PHONY: install-man
 
 # Check
 

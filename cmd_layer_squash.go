@@ -12,7 +12,7 @@ import (
 
 func init() {
 	cmd := &cobra.Command{
-		Use:   "squash IN_LAYERFILES... >OUT_LAYERFILE",
+		Use:   "squash [flags] IN_LAYERFILES... >OUT_LAYERFILE",
 		Short: "Squash several layers in to a single layer",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(flags *cobra.Command, args []string) error {
