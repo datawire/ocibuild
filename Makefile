@@ -38,11 +38,11 @@ install: $(DESTDIR)$(zsh_completion_dir)/_$(name)
 $(DESTDIR)$(bindir)/$(name): $(name)
 	install -Dm755 $< $@
 $(DESTDIR)$(bash_completion_dir)/$(name): completion.bash
-	install -Dm7644 $< $@
+	install -Dm644 $< $@
 $(DESTDIR)$(fish_completion_dir)/$(name).fish: completion.fish
-	install -Dm7644 $< $@
+	install -Dm644 $< $@
 $(DESTDIR)$(zsh_completion_dir)/_$(name): completion.zsh
-	install -Dm7644 $< $@
+	install -Dm644 $< $@
 
 # Check
 
