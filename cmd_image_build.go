@@ -3,11 +3,13 @@ package main
 import (
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
+
+	"github.com/datawire/ocibuild/pkg/fsutil"
 )
 
 func init() {
@@ -20,15 +22,15 @@ func init() {
 			base := empty.Image
 			if argBase != "" {
 				var err error
-				base, err = OpenImage(argBase)
+				base, err = fsutil.OpenImage(argBase)
 				if err != nil {
 					return err
 				}
 			}
 
-			layers := make([]v1.Layer, 0, len(args))
+			layers := make([]ociv1.Layer, 0, len(args))
 			for _, layerpath := range args {
-				layer, err := OpenLayer(layerpath)
+				layer, err := fsutil.OpenLayer(layerpath)
 				if err != nil {
 					return err
 				}
@@ -39,7 +41,7 @@ func init() {
 			if err != nil {
 				return err
 			}
-			if err := tarball.Write(nil, img, os.Stdout); err != nil {
+			if err := ociv1tarball.Write(nil, img, os.Stdout); err != nil {
 				return err
 			}
 			return nil

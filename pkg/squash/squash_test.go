@@ -26,7 +26,9 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer layerReader.Close()
+	defer func() {
+		assert.NoError(t, layerReader.Close())
+	}()
 
 	tarReader := tar.NewReader(layerReader)
 	for {

@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/datawire/dlib v1.2.4
+	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-containerregistry v0.6.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
@@ -13,7 +14,6 @@ require (
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/klauspost/compress v1.13.0 // indirect

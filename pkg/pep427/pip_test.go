@@ -11,12 +11,12 @@ import (
 
 	"github.com/datawire/dlib/dexec"
 	"github.com/datawire/dlib/dlog"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/datawire/ocibuild/pkg/dir"
 	"github.com/datawire/ocibuild/pkg/pep427"
 	"github.com/datawire/ocibuild/pkg/python"
+	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
 func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme pep427.Scheme, err error) {
@@ -89,7 +89,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	}()
 
 	// Step 4: Actually run pip
-	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", wheelFile).Run()
+	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile).Run()
 	if err != nil {
 		return pep427.Scheme{}, err
 	}
@@ -137,7 +137,7 @@ func TestPIP(t *testing.T) {
 			require.NoError(t, err)
 
 			// compare them
-			assert.Equal(t, expLayer, actLayer)
+			testutil.AssertEqualLayers(t, expLayer, actLayer)
 		})
 	}
 }

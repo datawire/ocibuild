@@ -1,12 +1,12 @@
 package main
 
 import (
-	"io"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/squash"
 )
 
@@ -16,9 +16,9 @@ func init() {
 		Short: "Squash several layers in to a single layer",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(flags *cobra.Command, args []string) error {
-			layers := make([]v1.Layer, 0, len(args))
+			layers := make([]ociv1.Layer, 0, len(args))
 			for _, layerpath := range args {
-				layer, err := OpenLayer(layerpath)
+				layer, err := fsutil.OpenLayer(layerpath)
 				if err != nil {
 					return err
 				}
@@ -30,11 +30,7 @@ func init() {
 				return err
 			}
 
-			layerReader, err := layer.Uncompressed()
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(os.Stdout, layerReader); err != nil {
+			if err := fsutil.WriteLayer(layer, os.Stdout); err != nil {
 				return err
 			}
 			return nil
