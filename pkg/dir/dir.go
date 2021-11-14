@@ -7,13 +7,14 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func LayerFromDir(dirname string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromDir(dirname string, addPrefix string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	type logEntry struct {
 		Name string
 		Info fs.FileInfo
@@ -33,6 +34,12 @@ func LayerFromDir(dirname string, opts ...ociv1tarball.LayerOption) (ociv1.Layer
 			return err
 		}
 		name = filepath.ToSlash(name)
+		if name == "." {
+			return nil
+		}
+		if addPrefix != "" {
+			name = path.Join(addPrefix, name)
+		}
 		defer func() {
 			log = append(log, logEntry{
 				Name: name,

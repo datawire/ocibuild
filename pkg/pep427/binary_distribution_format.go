@@ -94,6 +94,11 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 //
 
 func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+	plat, err := sanitizePlatformForLayer(plat)
+	if err != nil {
+		return nil, err
+	}
+
 	zipReader, err := zip.OpenReader(wheelfilename)
 	if err != nil {
 		return nil, err

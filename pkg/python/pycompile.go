@@ -100,7 +100,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			if e != nil {
 				return e
 			}
-			if d.IsDir() || !strings.HasSuffix(p, ".py") {
+			if d.IsDir() || !strings.HasSuffix(p, ".pyc") {
 				return nil
 			}
 			info, err := d.Info()
@@ -118,9 +118,10 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			if err != nil {
 				return err
 			}
-			vfs[p[1:]] = &fileReference{
+			fullname := path.Join(path.Dir(in.FullName()), p)
+			vfs[fullname] = &fileReference{
 				FileInfo: info,
-				fullname: p[1:],
+				fullname: fullname,
 				content:  content,
 			}
 			return nil

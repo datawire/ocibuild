@@ -74,6 +74,35 @@ type Scheme struct {
 	Data    string `json:"data"`    // "/usr"
 }
 
+func sanitizePlatformForLayer(plat Platform) (Platform, error) {
+	if plat.ConsoleShebang == "" && plat.GraphicalShebang == "" {
+		return plat, fmt.Errorf("Platform specification does not specify a path to use for shebangs")
+	}
+	if plat.ConsoleShebang == "" {
+		plat.ConsoleShebang = plat.GraphicalShebang
+	}
+	if plat.GraphicalShebang == "" {
+		plat.GraphicalShebang = plat.ConsoleShebang
+	}
+	for _, pair := range []struct {
+		name string
+		ptr  *string
+	}{
+		{"purelib", &plat.Scheme.PureLib},
+		{"platlib", &plat.Scheme.PlatLib},
+		{"headers", &plat.Scheme.Headers},
+		{"scripts", &plat.Scheme.Scripts},
+		{"data", &plat.Scheme.Data},
+	} {
+		if !path.IsAbs(*pair.ptr) {
+			return plat, fmt.Errorf("Platform install scheme %q is not an absolute path: %q", pair.name, *pair.ptr)
+		}
+		clean := (*pair.ptr)[1:]
+		*pair.ptr = clean
+	}
+	return plat, nil
+}
+
 // This is based off of pip/_internal/utils/unpacking.py:zip_item_is_executable()`
 func isExecutable(f *zip.File) bool { //nolint:deadcode,unused
 	externalAttrs := python.ParseZIPExternalAttributes(f.FileHeader.ExternalAttrs)

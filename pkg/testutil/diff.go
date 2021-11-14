@@ -120,7 +120,6 @@ func DumpLayerListing(layer ociv1.Layer) (str string, err error) {
 			fmt.Sprintf("%d=%q", header.Uid, header.Uname),
 			fmt.Sprintf("%d=%q", header.Gid, header.Gname),
 			fmt.Sprintf("% 10d", header.Size),
-			header.ModTime.String(),
 			header.Name,
 		}, "\t")); err != nil {
 			return "", err
