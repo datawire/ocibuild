@@ -2,6 +2,7 @@ package pep427_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,15 +11,15 @@ import (
 
 	"github.com/datawire/dlib/dexec"
 	"github.com/datawire/dlib/dlog"
-	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/datawire/ocibuild/pkg/dir"
-	_ "github.com/datawire/ocibuild/pkg/pep427"
+	"github.com/datawire/ocibuild/pkg/pep427"
+	"github.com/datawire/ocibuild/pkg/python"
 )
 
-func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
+func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme pep427.Scheme, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err
@@ -27,11 +28,24 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
 
 	// Step 1: Create the venv
 	if err := dexec.CommandContext(ctx, "python3", "-m", "venv", destDir).Run(); err != nil {
-		return err
+		return pep427.Scheme{}, err
 	}
+	schemeBytes, err := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "python3"), "-c", `
+import json
+from pip._internal.locations import get_scheme;
+scheme=get_scheme("")
+print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
+`).Output()
+	if err != nil {
+		return pep427.Scheme{}, err
+	}
+	if err := json.Unmarshal(schemeBytes, &scheme); err != nil {
+		return pep427.Scheme{}, err
+	}
+
 	if err := os.Rename(destDir, destDir+".lower"); err != nil {
 		_ = os.RemoveAll(destDir)
-		return err
+		return pep427.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".lower"))
@@ -39,7 +53,7 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
 
 	// Step 2: Create the workdir
 	if err := os.Mkdir(destDir+".work", 0777); err != nil {
-		return err
+		return pep427.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".work"))
@@ -47,11 +61,11 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
 
 	// Step 3: Shuffle around "{destDir}" and "{destDir}.upper".
 	if err := os.Mkdir(destDir+".upper", 0777); err != nil {
-		return err
+		return pep427.Scheme{}, err
 	}
 	if err := os.Mkdir(destDir, 0777); err != nil {
-		maybeSetErr(os.RemoveAll(destDir + ".upper"))
-		return err
+		_ = os.RemoveAll(destDir + ".upper")
+		return pep427.Scheme{}, err
 	}
 	if err := dexec.CommandContext(ctx,
 		"sudo", "mount",
@@ -66,7 +80,7 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
 	).Run(); err != nil {
 		maybeSetErr(os.RemoveAll(destDir + ".upper"))
 		maybeSetErr(os.RemoveAll(destDir))
-		return err
+		return pep427.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(dexec.CommandContext(ctx, "sudo", "umount", destDir).Run())
@@ -77,10 +91,10 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (err error) {
 	// Step 4: Actually run pip
 	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", wheelFile).Run()
 	if err != nil {
-		return err
+		return pep427.Scheme{}, err
 	}
 
-	return nil
+	return scheme, nil
 }
 
 // Test against the Package Installer for Python.
@@ -99,15 +113,30 @@ func TestPIP(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx := dlog.NewTestContext(t, true)
 			tmpdir := t.TempDir()
-			require.NoError(t, pipInstall(ctx,
+
+			// pip reference install
+			scheme, err := pipInstall(ctx,
 				filepath.Join("testdata", name), // wheelfile
-				filepath.Join(tmpdir, "dst")))   // dest dir
+				filepath.Join(tmpdir, "dst"))    // dest dir
+			require.NoError(t, err)
 			expLayer, err := dir.LayerFromDir(tmpdir)
 			require.NoError(t, err)
 
-			// TODO: run pkg/pep427 (set Platform dirs to match {dir}/dst)
-			actLayer := ociv1.Layer(nil)
+			// build platform data based on what pip did
+			compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
+			require.NoError(t, err)
+			plat := pep427.Platform{
+				ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
+				GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
+				Scheme:           scheme,
+				PyCompile:        compiler,
+			}
 
+			// our own install
+			actLayer, err := pep427.InstallWheel(ctx, plat, filepath.Join("testdata", name))
+			require.NoError(t, err)
+
+			// compare them
 			assert.Equal(t, expLayer, actLayer)
 		})
 	}

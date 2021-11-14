@@ -18,7 +18,10 @@ import (
 	"strings"
 
 	"github.com/datawire/dlib/dlog"
+	ociv1 "github.com/google/go-containerregistry/pkg/v1"
+	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 
+	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 )
 
@@ -90,10 +93,10 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 // =======
 //
 
-func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) error {
+func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	zipReader, err := zip.OpenReader(wheelfilename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer zipReader.Close()
 
@@ -111,16 +114,16 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 	//   a. Parse ``distribution-1.0.dist-info/WHEEL``.
 	metadata, err := wh.parseDistInfoWheel()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	//   b. Check that installer is compatible with Wheel-Version.  Warn if
 	//      minor version is greater, abort if major version is greater.
 	wheelVersion, err := parseVersion(metadata.Get("Wheel-Version"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if wheelVersion[0] > specVersion[0] {
-		return fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
+		return nil, fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
 	}
 	if vercmp(wheelVersion, specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
@@ -130,16 +133,16 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 	//   d. Else unpack archive into platlib (site-packages).
 	var dstDir string
 	if metadata.Get("Root-Is-Purelib") == "true" {
-		dstDir = plat.Target.PureLib
+		dstDir = plat.Scheme.PureLib
 	} else {
-		dstDir = plat.Target.PlatLib
+		dstDir = plat.Scheme.PlatLib
 	}
-	vfs := make(map[string]*zipEntry)
+	vfs := make(map[string]fsutil.FileReference)
 	for _, file := range wh.zip.File {
-		vfs[path.Join(dstDir, file.FileHeader.Name)] = &zipEntry{
-			FileHeader: file.FileHeader,
-			Open:       file.Open,
-		}
+		create(vfs, path.Join(dstDir, file.FileHeader.Name), &zipEntry{
+			header: file.FileHeader,
+			open:   file.Open,
+		})
 	}
 	//
 	// - Spread.
@@ -154,7 +157,7 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 	//      ``distutils.command.install``.
 	distInfoDir, err := wh.distInfoDir()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	vfsTypes := make(map[string]string)
 	dataDir := path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data")
@@ -173,47 +176,54 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 		var dstDataDir string
 		switch key {
 		case "purelib":
-			dstDataDir = plat.Target.PureLib
+			dstDataDir = plat.Scheme.PureLib
 		case "platlib":
-			dstDataDir = plat.Target.PlatLib
+			dstDataDir = plat.Scheme.PlatLib
 		case "headers":
-			dstDataDir = plat.Target.Headers
+			dstDataDir = plat.Scheme.Headers
 		case "scripts":
-			dstDataDir = plat.Target.Scripts
+			dstDataDir = plat.Scheme.Scripts
 		case "data":
-			dstDataDir = plat.Target.Data
+			dstDataDir = plat.Scheme.Data
 		default:
-			return fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
+			return nil, fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
 		}
-		vfsTypes[path.Join(dstDataDir, rest)] = key
-		vfs[path.Join(dstDataDir, rest)] = vfs[fullName]
-		delete(vfs, fullName)
+		newFullName := path.Join(dstDataDir, rest)
+		vfsTypes[newFullName] = key
+		if err := rename(vfs, fullName, newFullName); err != nil {
+			return nil, err
+		}
 	}
 	//   c. If applicable, update scripts starting with ``#!python`` to point
 	//      to the correct interpreter.
 	if err := rewritePython(plat, vfs, vfsTypes); err != nil {
-		return err
+		return nil, err
 	}
 	//   d. Update ``distribution-1.0.dist-info/RECORD`` with the installed
 	//      paths.
-	vfs[path.Join(dstDir, distInfoDir, "RECORD")] = TODO()
+	//create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
 	//   e. Remove empty ``distribution-1.0.data`` directory.
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
 	//      enough to remove .pyc even if it is not mentioned in RECORD.)
-	for fileName, fileContent := range vfs {
-		if !strings.HasSuffix(fileName, ".py") {
+	for _, file := range vfs {
+		if !strings.HasSuffix(file.Name(), ".py") {
 			continue
 		}
-		newFiles, err := plat.PyCompile(ctx, fileContent)
+		newFiles, err := plat.PyCompile(ctx, file)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("py_compile: %w", err)
 		}
-		for newName, newContent := range newFiles {
-			vfs[newName] = newContent
+		for _, newFile := range newFiles {
+			vfs[newFile.FullName()] = newFile
 		}
 	}
-	return nil
+
+	refs := make([]fsutil.FileReference, 0, len(vfs))
+	for _, file := range vfs {
+		refs = append(refs, file)
+	}
+	return fsutil.LayerFromFileReferences(refs, opts...)
 }
 
 //
@@ -221,7 +231,7 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 // ''''''''''''''''''''''''''''''
 //
 
-func rewritePython(plat Platform, vfs map[string]*zipEntry, vfsTypes map[string]string) error {
+func rewritePython(plat Platform, vfs map[string]fsutil.FileReference, vfsTypes map[string]string) error {
 	// Rewrite ``#!python``.
 	//     In wheel, scripts are packaged in
 	//     ``{distribution}-{version}.data/scripts/``.  If the first line of
@@ -251,18 +261,20 @@ func rewritePython(plat Platform, vfs map[string]*zipEntry, vfsTypes map[string]
 		}
 
 		originalOpen := vfs[filename].Open
+		shebang := plat.ConsoleShebang
 		skip := len("#!python")
 		if bytes.Equal(header, []byte("#!pythonw")) {
 			skip++
+			shebang = plat.GraphicalShebang
 		}
-		vfs[filename].Open = func() (io.ReadCloser, error) {
+		vfs[filename].(*zipEntry).open = func() (io.ReadCloser, error) {
 			inner, err := originalOpen()
 			if err != nil {
 				return nil, err
 			}
 			return readCloser{
 				Reader: io.MultiReader(
-					strings.NewReader(plat.Target.Python),
+					strings.NewReader(shebang),
 					&skipReader{
 						skip:  skip,
 						inner: inner,
@@ -272,9 +284,9 @@ func rewritePython(plat Platform, vfs map[string]*zipEntry, vfsTypes map[string]
 			}, nil
 		}
 
-		externalAttrs := python.ParseZIPExternalAttributes(vfs[filename].FileHeader.ExternalAttrs)
+		externalAttrs := python.ParseZIPExternalAttributes(vfs[filename].(*zipEntry).header.ExternalAttrs)
 		externalAttrs.UNIX = externalAttrs.UNIX | 0111
-		vfs[filename].FileHeader.ExternalAttrs = externalAttrs.Raw()
+		vfs[filename].(*zipEntry).header.ExternalAttrs = externalAttrs.Raw()
 	}
 	return nil
 }

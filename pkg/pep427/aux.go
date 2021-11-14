@@ -3,7 +3,6 @@ package pep427
 import (
 	"archive/zip"
 	"fmt"
-	"io"
 	"path"
 	"sort"
 	"strconv"
@@ -57,21 +56,22 @@ func vercmp(a, b version) int {
 }
 
 type Platform struct {
-	Target struct {
-		// For shebangs
-		Python string // "/usr/bin/python3"
+	ConsoleShebang   string // "/usr/bin/python3"
+	GraphicalShebang string // "/usr/bin/python3"
+	Scheme           Scheme
 
-		// Installation directories: These are the directories described in
-		// distutils.command.install.SCHEME_KEYS and
-		// distutils.command.install.INSTALL_SCHEMES.
-		PureLib string // "/usr/lib/python3.9/site-packages"
-		PlatLib string // "/usr/lib64/python3.9/site-packages"
-		Headers string // "/usr/include/python3.9/$name/" (e.g. $name=cpython)
-		Scripts string // "/usr/bin"
-		Data    string // "/usr"
-	}
+	PyCompile python.Compiler
+}
 
-	PyCompile PyCompiler
+type Scheme struct {
+	// Installation directories: These are the directories described in
+	// distutils.command.install.SCHEME_KEYS and
+	// distutils.command.install.INSTALL_SCHEMES.
+	PureLib string `json:"purelib"` // "/usr/lib/python3.9/site-packages"
+	PlatLib string `json:"platlib"` // "/usr/lib64/python3.9/site-packages"
+	Headers string `json:"headers"` // "/usr/include/python3.9/$name/" (e.g. $name=cpython)
+	Scripts string `json:"scripts"` // "/usr/bin"
+	Data    string `json:"data"`    // "/usr"
 }
 
 // This is based off of pip/_internal/utils/unpacking.py:zip_item_is_executable()`
@@ -110,13 +110,4 @@ func (wh *wheel) distInfoDir() (string, error) {
 		sort.Strings(list)
 		return "", fmt.Errorf("multiple .dist-info directories found: %v", list)
 	}
-}
-
-type zipEntry struct {
-	zip.FileHeader
-	Open func() (io.ReadCloser, error)
-}
-
-func TODO() *zipEntry {
-	return nil
 }

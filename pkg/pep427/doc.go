@@ -4,8 +4,8 @@
 // https://packaging.python.org/specifications/binary-distribution-format/
 //
 // Other useful references:
-// - distutils/command/install.py
-// - site-packages/pip/_internal/operations/install/wheel.py
-// - site-packages/pip/_internal/utils/unpacking.py
-// - site-packages/pip/_internal/utils/wheel.py
+//  - distutils/command/install.py
+//  - site-packages/pip/_internal/operations/install/wheel.py
+//  - site-packages/pip/_internal/utils/unpacking.py
+//  - site-packages/pip/_internal/utils/wheel.py
 package pep427

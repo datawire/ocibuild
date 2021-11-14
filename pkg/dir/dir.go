@@ -66,10 +66,11 @@ func LayerFromDir(dirname string, opts ...ociv1tarball.LayerOption) (ociv1.Layer
 			if err != nil {
 				return err
 			}
-			defer func() {
-				_ = fh.Close()
-			}()
 			if _, err := io.Copy(tarWriter, fh); err != nil {
+				_ = fh.Close()
+				return err
+			}
+			if err := fh.Close(); err != nil {
 				return err
 			}
 		}
