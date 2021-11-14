@@ -1,6 +1,7 @@
 package pep427
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"io"
 	"io/fs"
@@ -69,4 +70,25 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 func create(vfs map[string]fsutil.FileReference, name string, content *zipEntry) {
 	content.header.Name = name
 	vfs[name] = content
+}
+
+type tarSysEntry struct {
+	fsutil.FileReference
+	tarHeader *tar.Header
+}
+
+func (f *tarSysEntry) Sys() interface{} {
+	return f.tarHeader
+}
+
+func newTarSysEntry(in fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
+	header, err := tar.FileInfoHeader(in, "")
+	if err != nil {
+		return nil, err
+	}
+	fn(header)
+	return &tarSysEntry{
+		FileReference: in,
+		tarHeader:     header,
+	}, nil
 }

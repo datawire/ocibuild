@@ -7,6 +7,7 @@
 package pep427
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bufio"
 	"bytes"
@@ -226,7 +227,16 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts
 
 	refs := make([]fsutil.FileReference, 0, len(vfs))
 	for _, file := range vfs {
-		refs = append(refs, file)
+		ref, err := newTarSysEntry(file, func(header *tar.Header) {
+			header.Uid = plat.UID
+			header.Gid = plat.GID
+			header.Uname = plat.UName
+			header.Gname = plat.GName
+		})
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
 	}
 	return fsutil.LayerFromFileReferences(refs, opts...)
 }

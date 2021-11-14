@@ -58,7 +58,13 @@ func vercmp(a, b version) int {
 type Platform struct {
 	ConsoleShebang   string // "/usr/bin/python3"
 	GraphicalShebang string // "/usr/bin/python3"
-	Scheme           Scheme
+
+	Scheme Scheme
+
+	UID   int
+	GID   int
+	UName string
+	GName string
 
 	PyCompile python.Compiler
 }

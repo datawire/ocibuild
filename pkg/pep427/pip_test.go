@@ -3,7 +3,9 @@ package pep427_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -128,10 +130,18 @@ func TestPIP(t *testing.T) {
 			// build platform data based on what pip did
 			compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
 			require.NoError(t, err)
+			usr, err := user.Current()
+			require.NoError(t, err)
+			grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
+			require.NoError(t, err)
 			plat := pep427.Platform{
 				ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
 				GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
 				Scheme:           scheme,
+				UID:              os.Getuid(),
+				GID:              os.Getgid(),
+				UName:            usr.Username,
+				GName:            grp.Name,
 				PyCompile:        compiler,
 			}
 
