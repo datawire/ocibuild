@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path"
 	"strings"
 
@@ -48,7 +47,7 @@ func parseLayer(layer ociv1.Layer) (*layerFS, error) {
 		}
 		header.Name = cleanName
 
-		body, err := ioutil.ReadAll(tarReader)
+		body, err := io.ReadAll(tarReader)
 		if err != nil {
 			return nil, fmt.Errorf("reading tar: %w", err)
 		}

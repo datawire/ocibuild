@@ -5,7 +5,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -48,6 +47,6 @@ func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer
 	// Wrap that in to a Layer object
 	byteSlice := byteWriter.Bytes()
 	return ociv1tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(byteSlice)), nil
+		return io.NopCloser(bytes.NewReader(byteSlice)), nil
 	}, opts...)
 }

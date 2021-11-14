@@ -1,8 +1,20 @@
 linters:
   enable:
+    - depguard
+    - forbidigo
     - gci
     - nolintlint
 linters-settings:
+  depguard:
+    list-type: blacklist
+    include-go-root: true
+    packages-with-error-message:
+      - io/ioutil: "`io/ioutil` is deprecated in Go 1.16, use `io` or `os` instead"
+  forbidigo:
+    forbid:
+      - '^os\.(DirEntry|FileInfo|FileMode|PathError)$' # deprecated in Go 1.16, import them from 'io/fs' instead
+      - '\.Readdir$' # deprecated in Go 1.16, use ReadDir instead
+    exclude_godoc_examples: false
   goimports:
     local-prefixes: github.com/datawire/ocibuild
   nolintlint:
@@ -12,4 +24,5 @@ linters-settings:
     require-specific: true
     allow-no-explanation:
       - deadcode
+      - unused
       - varcheck

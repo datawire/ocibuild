@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -38,7 +37,7 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 			}
 			t.Fatal(err)
 		}
-		_, err = ioutil.ReadAll(tarReader)
+		_, err = io.ReadAll(tarReader)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +74,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 	// Wrap that in to a Layer object
 	byteSlice := byteWriter.Bytes()
 	ret, err := ociv1tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(byteSlice)), nil
+		return io.NopCloser(bytes.NewReader(byteSlice)), nil
 	})
 	if err != nil {
 		t.Fatal(err)

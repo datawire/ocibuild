@@ -3,11 +3,11 @@
 package python
 
 import (
-	"os"
+	"io/fs"
 )
 
 // A StatMode represents a file's mode and permission bits, as represented in Python
-// (i.e. `os.stat()`'s `st_mode` member).  Similar to how Go's `os.FileMode` assigns bits to have
+// (i.e. `os.stat()`'s `st_mode` member).  Similar to how Go's `io/fs.FileMode` assigns bits to have
 // the same definition on all systems for portability, Python's `stat` assigns bits to have the same
 // definition on all systems for portability.  And it just so happens that Go's bits match those of
 // Plan 9, and Python's bits match those of the Linux kernel.
@@ -45,72 +45,72 @@ const (
 	ModePermOthX StatMode = 000_0001 // permission: other: execute
 )
 
-func (pm StatMode) ToGo() os.FileMode {
+func (pm StatMode) ToGo() fs.FileMode {
 	// permissions: base
-	gm := os.FileMode(pm & 0777)
+	gm := fs.FileMode(pm & 0777)
 
 	// permissions: extended
 	if pm&ModePermSetGID != 0 {
-		gm |= os.ModeSetgid
+		gm |= fs.ModeSetgid
 	}
 	if pm&ModePermSetUID != 0 {
-		gm |= os.ModeSetuid
+		gm |= fs.ModeSetuid
 	}
 	if pm&ModePermSticky != 0 {
-		gm |= os.ModeSticky
+		gm |= fs.ModeSticky
 	}
 
 	// type
 	switch pm & ModeFmt {
 	case ModeFmtBlockDevice:
-		gm |= os.ModeDevice
+		gm |= fs.ModeDevice
 	case ModeFmtCharDevice:
-		gm |= os.ModeDevice | os.ModeCharDevice
+		gm |= fs.ModeDevice | fs.ModeCharDevice
 	case ModeFmtDir:
-		gm |= os.ModeDir
+		gm |= fs.ModeDir
 	case ModeFmtNamedPipe:
-		gm |= os.ModeNamedPipe
+		gm |= fs.ModeNamedPipe
 	case ModeFmtSymlink:
-		gm |= os.ModeSymlink
+		gm |= fs.ModeSymlink
 	case ModeFmtRegular:
 		// nothing to do
 	case ModeFmtSocket:
-		gm |= os.ModeSocket
+		gm |= fs.ModeSocket
 	}
 
 	return gm
 }
 
-func ModeFromGo(gm os.FileMode) StatMode {
+func ModeFromGo(gm fs.FileMode) StatMode {
 	// permissions: base
 	pm := StatMode(gm & 0777)
 
 	// permissions: extended
-	if gm&os.ModeSetgid != 0 {
+	if gm&fs.ModeSetgid != 0 {
 		pm |= ModePermSetGID
 	}
-	if gm&os.ModeSetuid != 0 {
+	if gm&fs.ModeSetuid != 0 {
 		pm |= ModePermSetUID
 	}
-	if gm&os.ModeSticky != 0 {
+	if gm&fs.ModeSticky != 0 {
 		pm |= ModePermSticky
 	}
 
 	// type
-	switch gm & os.ModeType {
-	case os.ModeDevice:
+	switch gm & fs.ModeType {
+	case fs.ModeDevice:
 		pm |= ModeFmtBlockDevice
-	case os.ModeDevice | os.ModeCharDevice:
+	case fs.ModeDevice | fs.ModeCharDevice:
 		pm |= ModeFmtCharDevice
-	case os.ModeDir:
+	case fs.ModeDir:
 		pm |= ModeFmtDir
-	case os.ModeNamedPipe:
+	case fs.ModeNamedPipe:
 		pm |= ModeFmtNamedPipe
-	case os.ModeSymlink:
+	case fs.ModeSymlink:
 		pm |= ModeFmtSymlink
 	case 0:
 		pm |= ModeFmtRegular
-	case os.ModeSocket:
+	case fs.ModeSocket:
 		pm |= ModeFmtSocket
 	}
 

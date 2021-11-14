@@ -2,7 +2,7 @@
 // https://github.com/pypa/packaging.python.org/blob/main/source/specifications/binary-distribution-format.rst,
 // which has been placed in to the public domain.
 //
-// It is up-to-date as of 2021-10-31 (commit 526ee6d6563855551bfee4d967a06823044ddbd4).
+// It is up-to-date as of 2021-11-13 (commit 526ee6d6563855551bfee4d967a06823044ddbd4, 2021-09-02).
 
 package pep427
 
@@ -201,11 +201,17 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string) erro
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
 	//      enough to remove .pyc even if it is not mentioned in RECORD.)
-	for filename := range vfs {
-		if !strings.HasSuffix(filename, ".pyc") {
+	for fileName, fileContent := range vfs {
+		if !strings.HasSuffix(fileName, ".py") {
 			continue
 		}
-		TODO()
+		newFiles, err := plat.PyCompile(ctx, fileContent)
+		if err != nil {
+			return err
+		}
+		for newName, newContent := range newFiles {
+			vfs[newName] = newContent
+		}
 	}
 	return nil
 }
@@ -400,18 +406,18 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 
 	kvReader := textproto.NewReader(bufio.NewReader(wheelFile))
 	return kvReader.ReadMIMEHeader()
+	//
+	// #. ``Wheel-Version`` is the version number of the Wheel specification.
+	// #. ``Generator`` is the name and optionally the version of the software
+	//    that produced the archive.
+	// #. ``Root-Is-Purelib`` is true if the top level directory of the archive
+	//    should be installed into purelib; otherwise the root should be installed
+	//    into platlib.
+	// #. ``Tag`` is the wheel's expanded compatibility tags; in the example the
+	//    filename would contain ``py2.py3-none-any``.
+	// #. ``Build`` is the build number and is omitted if there is no build number.
 }
 
-//
-// #. ``Wheel-Version`` is the version number of the Wheel specification.
-// #. ``Generator`` is the name and optionally the version of the software
-//    that produced the archive.
-// #. ``Root-Is-Purelib`` is true if the top level directory of the archive
-//    should be installed into purelib; otherwise the root should be installed
-//    into platlib.
-// #. ``Tag`` is the wheel's expanded compatibility tags; in the example the
-//    filename would contain ``py2.py3-none-any``.
-// #. ``Build`` is the build number and is omitted if there is no build number.
 // #. A wheel installer should warn if Wheel-Version is greater than the
 //    version it supports, and must fail if Wheel-Version has a greater
 //    major version than the version it supports.

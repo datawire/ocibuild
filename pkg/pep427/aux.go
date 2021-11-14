@@ -59,24 +59,23 @@ func vercmp(a, b version) int {
 type Platform struct {
 	Target struct {
 		// For shebangs
-		Python string // /usr/lib/python3
+		Python string // "/usr/bin/python3"
 
 		// Installation directories: These are the directories described in
 		// distutils.command.install.SCHEME_KEYS and
 		// distutils.command.install.INSTALL_SCHEMES.
-		PureLib string // /usr/lib/python3.9/site-packages
-		PlatLib string // /usr/lib64/python3.9/site-packages
-		Headers string // /usr/include/python3.9/$name/ (e.g. $name=cpython)
-		Scripts string // /usr/bin
-		Data    string // /usr
+		PureLib string // "/usr/lib/python3.9/site-packages"
+		PlatLib string // "/usr/lib64/python3.9/site-packages"
+		Headers string // "/usr/include/python3.9/$name/" (e.g. $name=cpython)
+		Scripts string // "/usr/bin"
+		Data    string // "/usr"
 	}
 
-	// For byte-compiling
-	Python string // /usr/lib/python3
+	PyCompile PyCompiler
 }
 
 // This is based off of pip/_internal/utils/unpacking.py:zip_item_is_executable()`
-func isExecutable(f *zip.File) bool {
+func isExecutable(f *zip.File) bool { //nolint:deadcode,unused
 	externalAttrs := python.ParseZIPExternalAttributes(f.FileHeader.ExternalAttrs)
 	return externalAttrs.UNIX.IsRegular() && (externalAttrs.UNIX&0111 != 0)
 }
