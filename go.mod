@@ -6,8 +6,10 @@ require (
 	github.com/datawire/dlib v1.2.4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-containerregistry v0.6.0
+	github.com/pmezard/go-difflib v1.0.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
+	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 )
 
@@ -20,7 +22,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
