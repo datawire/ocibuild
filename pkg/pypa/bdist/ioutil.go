@@ -1,4 +1,4 @@
-package pep427
+package bdist
 
 import (
 	"archive/tar"

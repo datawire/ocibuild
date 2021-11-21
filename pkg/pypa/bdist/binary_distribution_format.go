@@ -4,7 +4,7 @@
 //
 // It is up-to-date as of 2021-11-13 (commit 526ee6d6563855551bfee4d967a06823044ddbd4, 2021-09-02).
 
-package pep427
+package bdist
 
 import (
 	"archive/tar"

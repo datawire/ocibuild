@@ -1,4 +1,5 @@
-// Package pep427 implements Python PEP 427 -- The Wheel Binary Package Format 1.0.
+// Package bdist implements the PyPA Binary distribution format (AKA Python PEP 427 -- The Wheel
+// Binary Package Format 1.0).
 //
 // https://www.python.org/dev/peps/pep-0427/
 // https://packaging.python.org/specifications/binary-distribution-format/
@@ -8,4 +9,4 @@
 //  - site-packages/pip/_internal/operations/install/wheel.py
 //  - site-packages/pip/_internal/utils/unpacking.py
 //  - site-packages/pip/_internal/utils/wheel.py
-package pep427
+package bdist

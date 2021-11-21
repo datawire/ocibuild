@@ -1,4 +1,4 @@
-package pep427_test
+package bdist_test
 
 import (
 	"context"
@@ -16,12 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/datawire/ocibuild/pkg/dir"
-	"github.com/datawire/ocibuild/pkg/pep427"
+	"github.com/datawire/ocibuild/pkg/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
-func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme pep427.Scheme, err error) {
+func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme bdist.Scheme, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err
@@ -30,7 +30,7 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme pep427.S
 
 	// Step 1: Create the venv
 	if err := dexec.CommandContext(ctx, "python3", "-m", "venv", destDir).Run(); err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	schemeBytes, err := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "python3"), "-c", `
 import json
@@ -39,15 +39,15 @@ scheme=get_scheme("")
 print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 `).Output()
 	if err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	if err := json.Unmarshal(schemeBytes, &scheme); err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 
 	if err := os.Rename(destDir, destDir+".lower"); err != nil {
 		_ = os.RemoveAll(destDir)
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".lower"))
@@ -55,7 +55,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 	// Step 2: Create the workdir
 	if err := os.Mkdir(destDir+".work", 0777); err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".work"))
@@ -63,11 +63,11 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 	// Step 3: Shuffle around "{destDir}" and "{destDir}.upper".
 	if err := os.Mkdir(destDir+".upper", 0777); err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	if err := os.Mkdir(destDir, 0777); err != nil {
 		_ = os.RemoveAll(destDir + ".upper")
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	if err := dexec.CommandContext(ctx,
 		"sudo", "mount",
@@ -82,7 +82,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	).Run(); err != nil {
 		maybeSetErr(os.RemoveAll(destDir + ".upper"))
 		maybeSetErr(os.RemoveAll(destDir))
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(dexec.CommandContext(ctx, "sudo", "umount", destDir).Run())
@@ -93,7 +93,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	// Step 4: Actually run pip
 	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile).Run()
 	if err != nil {
-		return pep427.Scheme{}, err
+		return bdist.Scheme{}, err
 	}
 
 	return scheme, nil
@@ -134,7 +134,7 @@ func TestPIP(t *testing.T) {
 			require.NoError(t, err)
 			grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
 			require.NoError(t, err)
-			plat := pep427.Platform{
+			plat := bdist.Platform{
 				ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
 				GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
 				Scheme:           scheme,
@@ -146,7 +146,7 @@ func TestPIP(t *testing.T) {
 			}
 
 			// our own install
-			actLayer, err := pep427.InstallWheel(ctx, plat, filepath.Join("testdata", name))
+			actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join("testdata", name))
 			require.NoError(t, err)
 
 			// compare them
