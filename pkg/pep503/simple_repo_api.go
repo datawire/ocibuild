@@ -28,6 +28,7 @@ type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 	UserAgent  string
+	HTMLHook   func(context.Context, *html.Node) error
 }
 
 func (c *Client) fillDefaults() {
@@ -151,6 +152,12 @@ func (c Client) getHTML5Index(ctx context.Context, requestURL string) ([]Link, e
 	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {
 		return nil, err
+	}
+
+	if c.HTMLHook != nil {
+		if err := c.HTMLHook(ctx, doc); err != nil {
+			return nil, err
+		}
 	}
 
 	var links []Link
