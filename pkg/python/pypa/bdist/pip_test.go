@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/datawire/ocibuild/pkg/dir"
-	"github.com/datawire/ocibuild/pkg/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 

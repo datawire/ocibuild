@@ -166,10 +166,23 @@ func (v Version) IsFinal() bool {
 // of each component of the release segment in turn. When comparing release
 // segments with different numbers of components, the shorter segment is
 // padded out with additional zeros as necessary.
+
+func (v Version) releaseSegment(n int) int {
+	if n < len(v.Release) {
+		return v.Release[n]
+	}
+	return 0
+}
+
 //
 // While any number of additional components after the first are permitted
 // under this scheme, the most common variants are to use two components
 // ("major.minor") or three components ("major.minor.micro").
+
+func (v Version) Major() int { return v.releaseSegment(0) }
+func (v Version) Minor() int { return v.releaseSegment(1) }
+func (v Version) Micro() int { return v.releaseSegment(2) }
+
 //
 // For example::
 //
@@ -740,3 +753,13 @@ func (v Version) IsFinal() bool {
 //
 // As with other translated version identifiers, the corresponding Olson
 // database version could be recorded in the project metadata.
+
+func ParseVersion(str string) (*Version, error) {
+	panic("TODO")
+	return nil, nil
+}
+
+func (v Version) String() string {
+	panic("TODO")
+	return ""
+}

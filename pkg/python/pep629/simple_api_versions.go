@@ -5,12 +5,13 @@ package pep629
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/datawire/dlib"
+	"github.com/datawire/dlib/dlog"
 	"golang.org/x/net/html"
 
 	"github.com/datawire/ocibuild/pkg/htmlutil"
-	"github.com/datawire/ocibuild/pkg/pep440"
+	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
 
 var SupportedVersion, _ = pep440.ParseVersion("1.0")
@@ -32,6 +33,9 @@ func GetVersion(doc *html.Node) (*pep440.Version, error) {
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	if verStr == "" {
 		verStr = "1.0"
 	}
@@ -43,10 +47,10 @@ func HTMLVersionCheck(ctx context.Context, doc *html.Node) error {
 	if err != nil {
 		return err
 	}
-	if version.Major > SupportedVersion.Major {
+	if version.Major() > SupportedVersion.Major() {
 		return fmt.Errorf("server's pypi:repository version (%s) is not compatible with this client", version)
 	}
-	if version.Minor > SupportedVersion.Minor {
+	if version.Minor() > SupportedVersion.Minor() {
 		dlog.Warnf(ctx, "server's pypi:repository version (%s) is newer than this client", version)
 	}
 	return nil

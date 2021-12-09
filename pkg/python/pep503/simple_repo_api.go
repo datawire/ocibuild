@@ -39,7 +39,7 @@ func (c *Client) fillDefaults() {
 		c.HTTPClient = http.DefaultClient
 	}
 	if c.UserAgent == "" {
-		c.UserAgent = "github.com/datawire/ocibuild/pkg/pep503"
+		c.UserAgent = "github.com/datawire/ocibuild/pkg/python/pep503"
 	}
 }
 

@@ -4,9 +4,9 @@
 package simple_repo_api
 
 import (
-	"github.com/datawire/ocibuild/pkg/pep503"
-	_ "github.com/datawire/ocibuild/pkg/pep592"
-	"github.com/datawire/ocibuild/pkg/pep629"
+	"github.com/datawire/ocibuild/pkg/python/pep503"
+	_ "github.com/datawire/ocibuild/pkg/python/pep592"
+	"github.com/datawire/ocibuild/pkg/python/pep629"
 )
 
 func NewClient() pep503.Client {

@@ -11,7 +11,7 @@ func VisitHTML(node *html.Node, before, after func(*html.Node) error) error {
 		}
 	}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		if err := visitHTML(child, before, after); err != nil {
+		if err := VisitHTML(child, before, after); err != nil {
 			return err
 		}
 	}
@@ -27,7 +27,7 @@ func GetAttr(node *html.Node, namespace, name string) (val string, ok bool) {
 	if node == nil {
 		return "", false
 	}
-	for _, aggr := range node.Attr {
+	for _, attr := range node.Attr {
 		if attr.Namespace == namespace && attr.Key == name {
 			return attr.Val, true
 		}

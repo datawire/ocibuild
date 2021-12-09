@@ -4,10 +4,10 @@
 package pep592
 
 import (
-	"github.com/datawire/ocibuild/pkg/pep503"
+	"github.com/datawire/ocibuild/pkg/python/pep503"
 )
 
-func IsYanked(l FileLink) bool {
+func IsYanked(l pep503.FileLink) bool {
 	_, yanked := l.DataAttrs["data-yanked"]
 	return yanked
 }
