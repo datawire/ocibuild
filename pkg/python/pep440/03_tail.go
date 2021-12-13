@@ -1,5 +1,14 @@
 package pep440
 
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
 // Direct references
 // =================
 //
@@ -499,6 +508,7 @@ package pep440
 //     Projects with No Compatible Versions:     498/47114 (1.06%)
 //     Projects with Differing Latest Version:   688/47114 (1.46%)
 //
+
 // Appendix B : Parsing version strings with regular expressions
 // =============================================================
 //
@@ -554,18 +564,164 @@ package pep440
 //         r"^\s*" + VERSION_PATTERN + r"\s*$",
 //         re.VERBOSE | re.IGNORECASE,
 //     )
+var reVersion = regexp.MustCompile(`(?i)^\s*` + regexp.MustCompile(`(?:\s+|#.*)`).ReplaceAllString(`
+		v?
+		(?:
+		    (?:(?P<epoch>[0-9]+)!)?                           # epoch
+		    (?P<release>[0-9]+(?:\.[0-9]+)*)                  # release segment
+		    (?P<pre>                                          # pre-release
+		        [-_\.]?
+		        (?P<pre_l>(a|b|c|rc|alpha|beta|pre|preview))
+		        [-_\.]?
+		        (?P<pre_n>[0-9]+)?
+		    )?
+		    (?P<post>                                         # post release
+		        (?:-(?P<post_n1>[0-9]+))
+		        |
+		        (?:
+		            [-_\.]?
+		            (?P<post_l>post|rev|r)
+		            [-_\.]?
+		            (?P<post_n2>[0-9]+)?
+		        )
+		    )?
+		    (?P<dev>                                          # dev release
+		        [-_\.]?
+		        (?P<dev_l>dev)
+		        [-_\.]?
+		        (?P<dev_n>[0-9]+)?
+		    )?
+		)
+		(?:\+(?P<local>[a-z0-9]+(?:[-_\.][a-z0-9]+)*))?       # local version
+	`, ``) + `\s*$`)
+
+func parseVersion(str string) (*Version, error) {
+	m := reVersion.FindStringSubmatch(str)
+	if m == nil {
+		return nil, fmt.Errorf("invalid version: %q", str)
+	}
+
+	var v Version
+	var err error
+
+	if epoch := m[reVersion.SubexpIndex("epoch")]; epoch != "" {
+		v.Epoch, err = strconv.Atoi(epoch)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, segStr := range strings.Split(m[reVersion.SubexpIndex("release")], ".") {
+		segInt, err := strconv.Atoi(segStr)
+		if err != nil {
+			return nil, err
+		}
+		v.Release = append(v.Release, segInt)
+	}
+
+	type letterNumber struct {
+		L string
+		N int
+	}
+
+	parseLetterNumber := func(l, n string, acceptableLetters map[string][]string) (*letterNumber, error) {
+		if l == "" && n == "" {
+			return nil, nil
+		}
+		l = strings.ToLower(l)
+		if l != "" && n == "" {
+			n = "0"
+		}
+		var ret letterNumber
+
+		if _, ok := acceptableLetters[l]; ok {
+			ret.L = l
+		} else {
+			found := false
+		outer:
+			for canonical, others := range acceptableLetters {
+				for _, other := range others {
+					if l == other {
+						ret.L = canonical
+						found = true
+						break outer
+					}
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("invalid string-part: %q", l)
+			}
+		}
+
+		if n != "" {
+			ret.N, err = strconv.Atoi(n)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &ret, nil
+	}
+
+	pre, err := parseLetterNumber(
+		m[reVersion.SubexpIndex("pre_l")],
+		m[reVersion.SubexpIndex("pre_n")],
+		map[string][]string{
+			"a":  []string{"alpha"},
+			"b":  []string{"beta"},
+			"rc": []string{"c", "pre", "preview"},
+		})
+	if err != nil {
+		return nil, fmt.Errorf("pre-release: %w", err)
+	}
+	if pre != nil {
+		v.Pre = &struct {
+			L string
+			N int
+		}{
+			L: pre.L,
+			N: pre.N,
+		}
+	}
+
+	post, err := parseLetterNumber(
+		m[reVersion.SubexpIndex("post_l")],
+		m[reVersion.SubexpIndex("post_n1")]+m[reVersion.SubexpIndex("post_n2")],
+		map[string][]string{
+			"post": []string{"", "rev", "r"},
+		})
+	if err != nil {
+		return nil, fmt.Errorf("post-release: %w", err)
+	}
+	if post != nil {
+		v.Post = &post.N
+	}
+
+	dev, err := parseLetterNumber(
+		m[reVersion.SubexpIndex("dev_l")],
+		m[reVersion.SubexpIndex("dev_n")],
+		map[string][]string{
+			"dev": nil,
+		})
+	if err != nil {
+		return nil, fmt.Errorf("dev: %w", err)
+	}
+	if dev != nil {
+		v.Dev = &dev.N
+	}
+
+	localParts := strings.FieldsFunc(m[reVersion.SubexpIndex("local")], func(r rune) bool {
+		return strings.ContainsRune("-_.", r)
+	})
+	for _, part := range localParts {
+		v.Local = append(v.Local, intstr.Parse(strings.ToLower(part)))
+	}
+
+	return &v, nil
+}
+
 //
 //
 // Copyright
 // =========
 //
 // This document has been placed in the public domain.
-//
-//
-// ..
-//    Local Variables:
-//    mode: indented-text
-//    indent-tabs-mode: nil
-//    sentence-end-double-space: t
-//    fill-column: 70
-//    End:

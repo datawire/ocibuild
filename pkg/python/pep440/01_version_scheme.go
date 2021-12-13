@@ -1,5 +1,12 @@
 package pep440
 
+import (
+	"fmt"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
 // Version scheme
 // ==============
 //
@@ -12,6 +19,9 @@ package pep440
 // run the software.
 //
 //
+
+type Version = LocalVersion
+
 // Public version identifiers
 // --------------------------
 //
@@ -33,14 +43,60 @@ package pep440
 // provides a regular expression to check strict conformance with the canonical
 // format, as well as a more permissive regular expression accepting inputs that
 // may require subsequent normalization.
+
+func ParseVersion(str string) (*Version, error) {
+	v, err := parseVersion(str) // the routine from Appendix B
+	if err != nil {
+		return nil, fmt.Errorf("pep440.ParseVersion: %w", err)
+	}
+	return v, nil
+}
+
 //
 // Public version identifiers are separated into up to five segments:
 //
-// * Epoch segment: ``N!``
-// * Release segment: ``N(.N)*``
-// * Pre-release segment: ``{a|b|rc}N``
-// * Post-release segment: ``.postN``
-// * Development release segment: ``.devN``
+
+type PublicVersion struct {
+	// * Epoch segment: ``N!``
+	Epoch int
+	// * Release segment: ``N(.N)*``
+	Release []int
+	// * Pre-release segment: ``{a|b|rc}N``
+	Pre *struct {
+		L string
+		N int
+	}
+	// * Post-release segment: ``.postN``
+	Post *int
+	// * Development release segment: ``.devN``
+	Dev *int
+}
+
+func (v PublicVersion) writeTo(ret *strings.Builder) {
+	if v.Epoch > 0 {
+		fmt.Fprintf(ret, "%d!", v.Epoch)
+	}
+	fmt.Fprintf(ret, "%d", v.Release[0])
+	for _, segment := range v.Release[1:] {
+		fmt.Fprintf(ret, ".%d", segment)
+	}
+	if v.Pre != nil {
+		fmt.Fprintf(ret, "%s%d", v.Pre.L, v.Pre.N)
+	}
+	if v.Post != nil {
+		fmt.Fprintf(ret, ".post%d", *v.Post)
+	}
+	if v.Dev != nil {
+		fmt.Fprintf(ret, ".dev%d", *v.Dev)
+	}
+}
+
+func (v PublicVersion) String() string {
+	var ret strings.Builder
+	v.writeTo(&ret)
+	return ret.String()
+}
+
 //
 // Any given release will be a "final release", "pre-release", "post-release" or
 // "developmental release" as defined in the following sections.
@@ -103,6 +159,23 @@ package pep440
 //
 // Local version labels MUST start and end with an ASCII letter or digit.
 //
+type LocalVersion struct {
+	PublicVersion
+	Local []intstr.IntOrString
+}
+
+func (v LocalVersion) String() string {
+	var ret strings.Builder
+	v.PublicVersion.writeTo(&ret)
+	sep := "+"
+	for _, local := range v.Local {
+		ret.WriteString(sep)
+		ret.WriteString(local.String())
+		sep = "."
+	}
+	return ret.String()
+}
+
 // Comparison and ordering of local versions considers each segment of the local
 // version (divided by a ``.``) separately. If a segment consists entirely of
 // ASCII digits then that section should be considered an integer for comparison
@@ -113,6 +186,58 @@ package pep440
 // segments will always compare as greater than a local version with fewer
 // segments, as long as the shorter local version's segments match the beginning
 // of the longer local version's segments exactly.
+
+func cmpLocalSegment(a, b *intstr.IntOrString) int {
+	// handle one or both of them being nil
+	switch {
+	case a == nil && b == nil:
+		return 0
+	case a == nil && b != nil:
+		return -1
+	case a != nil && b == nil:
+		return 1
+	}
+	switch {
+	case a.Type == intstr.Int && b.Type == intstr.Int:
+		return int(a.IntVal - b.IntVal)
+	case a.Type == intstr.String && b.Type == intstr.String:
+		switch {
+		case a.StrVal < b.StrVal:
+			return -1
+		case a.StrVal > b.StrVal:
+			return 1
+		}
+		return 0
+	case a.Type == intstr.Int:
+		return 1
+	default:
+		return -1
+	}
+}
+
+func cmpLocal(a, b LocalVersion) int {
+	for i := 0; i < len(a.Local) || i < len(b.Local); i++ {
+		var aSeg, bSeg *intstr.IntOrString
+		if i < len(a.Local) {
+			aSeg = &(a.Local[i])
+		}
+		if i < len(b.Local) {
+			bSeg = &(b.Local[i])
+		}
+		if d := cmpLocalSegment(aSeg, bSeg); d != 0 {
+			return d
+		}
+	}
+	return 0
+}
+
+func (a LocalVersion) Cmp(b LocalVersion) int {
+	if d := a.PublicVersion.Cmp(b.PublicVersion); d != 0 {
+		return d
+	}
+	return cmpLocal(a, b)
+}
+
 //
 // An "upstream project" is a project that defines its own public versions. A
 // "downstream project" is one which tracks and redistributes an upstream project,
@@ -131,15 +256,6 @@ package pep440
 //
 // Source distributions using a local version identifier SHOULD provide the
 // ``python.integrator`` extension metadata (as defined in :pep:`459`).
-
-type Version struct {
-	Epoch   *int
-	Release []int
-	Post    *int
-	Dev     *int
-	Local   []string
-}
-
 //
 //
 // Final releases
@@ -148,8 +264,12 @@ type Version struct {
 // A version identifier that consists solely of a release segment and optionally
 // an epoch identifier is termed a "final release".
 
-func (v Version) IsFinal() bool {
-	return v.Post == nil && v.Dev == nil && len(v.Local) == 0
+func (v PublicVersion) IsFinal() bool {
+	return v.Pre == nil && v.Post == nil && v.Dev == nil
+}
+
+func (v LocalVersion) IsFinal() bool {
+	return v.PublicVersion.IsFinal() && len(v.Local) == 0
 }
 
 //
@@ -167,9 +287,18 @@ func (v Version) IsFinal() bool {
 // segments with different numbers of components, the shorter segment is
 // padded out with additional zeros as necessary.
 
-func (v Version) releaseSegment(n int) int {
+func (v PublicVersion) releaseSegment(n int) int {
 	if n < len(v.Release) {
 		return v.Release[n]
+	}
+	return 0
+}
+
+func cmpRelease(a, b PublicVersion) int {
+	for i := 0; i < len(a.Release) || i < len(b.Release); i++ {
+		if diff := a.releaseSegment(i) - b.releaseSegment(i); diff != 0 {
+			return diff
+		}
 	}
 	return 0
 }
@@ -179,9 +308,9 @@ func (v Version) releaseSegment(n int) int {
 // under this scheme, the most common variants are to use two components
 // ("major.minor") or three components ("major.minor.micro").
 
-func (v Version) Major() int { return v.releaseSegment(0) }
-func (v Version) Minor() int { return v.releaseSegment(1) }
-func (v Version) Micro() int { return v.releaseSegment(2) }
+func (v PublicVersion) Major() int { return v.releaseSegment(0) }
+func (v PublicVersion) Minor() int { return v.releaseSegment(1) }
+func (v PublicVersion) Micro() int { return v.releaseSegment(2) }
 
 //
 // For example::
@@ -253,6 +382,48 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 // of both ``rc`` and ``c`` releases for a common release segment.
 //
 //
+
+func cmpPreRelease(a, b PublicVersion) int {
+	order := map[string]int{
+		"a":     -3,
+		"alpha": -3,
+
+		"b":    -2,
+		"beta": -2,
+
+		"rc":      -1,
+		"c":       -1,
+		"pre":     -1,
+		"preview": -1,
+
+		// absent: 0,
+	}
+	var aL, aN, bL, bN int
+	var ok bool
+	if a.Pre != nil {
+		aL, ok = order[a.Pre.L]
+		if !ok {
+			panic(fmt.Errorf("invalid pre-release string: %q", a.Pre.L))
+		}
+		aN = a.Pre.N
+	} else if a.Dev != nil && a.Post == nil {
+		aL = -4
+	}
+	if b.Pre != nil {
+		bL, ok = order[b.Pre.L]
+		if !ok {
+			panic(fmt.Errorf("invalid pre-release string: %q", b.Pre.L))
+		}
+		bN = b.Pre.N
+	} else if b.Dev != nil && b.Post == nil {
+		bL = -4
+	}
+	if aL != bL {
+		return aL - bL
+	}
+	return aN - bN
+}
+
 // Post-releases
 // -------------
 //
@@ -292,6 +463,19 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 //    it makes the version identifier difficult to parse for human readers.
 //    In general, it is substantially clearer to simply create a new
 //    pre-release by incrementing the numeric component.
+
+func cmpPostRelease(a, b PublicVersion) int {
+	aPost := -1
+	if a.Post != nil {
+		aPost = *a.Post
+	}
+	bPost := -1
+	if b.Post != nil {
+		bPost = *b.Post
+	}
+	return aPost - bPost
+}
+
 //
 //
 // Developmental releases
@@ -339,6 +523,20 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 //    notation for full maintenance releases which may include code changes.
 //
 //
+
+func cmpDevRelease(a, b PublicVersion) int {
+	switch {
+	case a.Dev == nil && b.Dev == nil:
+		return 0
+	case a.Dev == nil && b.Dev != nil:
+		return 1
+	case a.Dev != nil && b.Dev == nil:
+		return -1
+	default:
+		return (*a.Dev) - (*b.Dev)
+	}
+}
+
 // Version epochs
 // --------------
 //
@@ -372,6 +570,11 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 //     1!1.0
 //     1!1.1
 //     1!2.0
+
+func cmpEpoch(a, b PublicVersion) int {
+	return a.Epoch - b.Epoch
+}
+
 //
 // Normalization
 // -------------
@@ -380,6 +583,23 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 // number of "alternative" syntaxes that MUST be taken into account when parsing
 // versions. These syntaxes MUST be considered when parsing a version, however
 // they should be "normalized" to the standard syntax defined above.
+
+func (v PublicVersion) Normalize() (*PublicVersion, error) {
+	n, err := ParseVersion(v.String())
+	if err != nil {
+		return nil, err
+	}
+	return &n.PublicVersion, nil
+}
+
+func (v LocalVersion) Normalize() (*LocalVersion, error) {
+	n, err := ParseVersion(v.String())
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
 //
 //
 // Case sensitivity
@@ -595,46 +815,66 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 //    automatically process distribution metadata, rather than developers
 //    of Python distributions deciding on a versioning scheme.
 //
-// The epoch segment of version identifiers MUST be sorted according to the
-// numeric value of the given epoch. If no epoch segment is present, the
-// implicit numeric value is ``0``.
-//
-// The release segment of version identifiers MUST be sorted in
-// the same order as Python's tuple sorting when the normalized release segment is
-// parsed as follows::
-//
-//     tuple(map(int, release_segment.split(".")))
-//
-// All release segments involved in the comparison MUST be converted to a
-// consistent length by padding shorter segments with zeros as needed.
-//
-// Within a numeric release (``1.0``, ``2.7.3``), the following suffixes
-// are permitted and MUST be ordered as shown::
-//
-//    .devN, aN, bN, rcN, <no suffix>, .postN
-//
-// Note that `c` is considered to be semantically equivalent to `rc` and must be
-// sorted as if it were `rc`. Tools MAY reject the case of having the same ``N``
-// for both a ``c`` and a ``rc`` in the same release segment as ambiguous and
-// remain in compliance with the PEP.
-//
-// Within an alpha (``1.0a1``), beta (``1.0b1``), or release candidate
-// (``1.0rc1``, ``1.0c1``), the following suffixes are permitted and MUST be
-// ordered as shown::
-//
-//    .devN, <no suffix>, .postN
-//
-// Within a post-release (``1.0.post1``), the following suffixes are permitted
-// and MUST be ordered as shown::
-//
-//     .devN, <no suffix>
-//
-// Note that ``devN`` and ``postN`` MUST always be preceded by a dot, even
-// when used immediately following a numeric version (e.g. ``1.0.dev456``,
-// ``1.0.post1``).
-//
-// Within a pre-release, post-release or development release segment with a
-// shared prefix, ordering MUST be by the value of the numeric component.
+
+func (a PublicVersion) Cmp(b PublicVersion) int {
+	// The epoch segment of version identifiers MUST be sorted according to the
+	// numeric value of the given epoch. If no epoch segment is present, the
+	// implicit numeric value is ``0``.
+	if d := cmpEpoch(a, b); d != 0 {
+		return d
+	}
+	//
+	// The release segment of version identifiers MUST be sorted in
+	// the same order as Python's tuple sorting when the normalized release segment is
+	// parsed as follows::
+	//
+	//     tuple(map(int, release_segment.split(".")))
+	//
+	// All release segments involved in the comparison MUST be converted to a
+	// consistent length by padding shorter segments with zeros as needed.
+	if d := cmpRelease(a, b); d != 0 {
+		return d
+	}
+	//
+	// Within a numeric release (``1.0``, ``2.7.3``), the following suffixes
+	// are permitted and MUST be ordered as shown::
+	//
+	//    .devN, aN, bN, rcN, <no suffix>, .postN
+	//
+	// Note that `c` is considered to be semantically equivalent to `rc` and must be
+	// sorted as if it were `rc`. Tools MAY reject the case of having the same ``N``
+	// for both a ``c`` and a ``rc`` in the same release segment as ambiguous and
+	// remain in compliance with the PEP.
+	if d := cmpPreRelease(a, b); d != 0 {
+		return d
+	}
+	//
+	// Within an alpha (``1.0a1``), beta (``1.0b1``), or release candidate
+	// (``1.0rc1``, ``1.0c1``), the following suffixes are permitted and MUST be
+	// ordered as shown::
+	//
+	//    .devN, <no suffix>, .postN
+	if d := cmpPostRelease(a, b); d != 0 {
+		return d
+	}
+	//
+	// Within a post-release (``1.0.post1``), the following suffixes are permitted
+	// and MUST be ordered as shown::
+	//
+	//     .devN, <no suffix>
+	if d := cmpDevRelease(a, b); d != 0 {
+		return d
+	}
+	//
+	// Note that ``devN`` and ``postN`` MUST always be preceded by a dot, even
+	// when used immediately following a numeric version (e.g. ``1.0.dev456``,
+	// ``1.0.post1``).
+	//
+	// Within a pre-release, post-release or development release segment with a
+	// shared prefix, ordering MUST be by the value of the numeric component.
+	return 0
+}
+
 //
 // The following example covers many of the possible combinations::
 //
@@ -753,13 +993,3 @@ func (v Version) Micro() int { return v.releaseSegment(2) }
 //
 // As with other translated version identifiers, the corresponding Olson
 // database version could be recorded in the project metadata.
-
-func ParseVersion(str string) (*Version, error) {
-	panic("TODO")
-	return nil, nil
-}
-
-func (v Version) String() string {
-	panic("TODO")
-	return ""
-}
