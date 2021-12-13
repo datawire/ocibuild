@@ -2,7 +2,7 @@
 
 package python
 
-// DOSAttribute represents an "MS-DOS directory attribute byte" (as referenced by the ZIP file
+// A DOSAttribute represents an "MS-DOS directory attribute byte" (as referenced by the ZIP file
 // format specification[1]).
 //
 // [1]: https://www.pkware.com/appnote
@@ -43,10 +43,13 @@ type ZIPExternalAttributes struct {
 	MSDOS  DOSAttribute
 }
 
+// Raw turns a 32-bit ZIPExternalAttributes struct in to an unstructured 32-bit unsigned integer.
 func (ea ZIPExternalAttributes) Raw() uint32 {
 	return uint32(ea.UNIX)<<16 | uint32(ea.Unused)<<8 | uint32(ea.MSDOS)
 }
 
+// ParseZIPExternalAttributes turns an unstructured 32-bit unsigned integer in to a 32-bit
+// ZIPExternalAttributes struct.
 func ParseZIPExternalAttributes(raw uint32) ZIPExternalAttributes {
 	return ZIPExternalAttributes{
 		UNIX:   StatMode(raw >> 16),

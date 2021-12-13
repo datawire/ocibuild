@@ -15,6 +15,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/fsutil"
 )
 
+// A Compiler is a function that takes an source .py file, and emits 1 or more compiled .pyc files.
 type Compiler func(context.Context, fsutil.FileReference) (map[string]fsutil.FileReference, error)
 
 type fileReference struct {
@@ -31,7 +32,13 @@ func (fr *fileReference) Open() (io.ReadCloser, error) {
 
 var _ fsutil.FileReference = (*fileReference)(nil)
 
-// plat.Compile = ExternalCompiler("python3", "-m", "compileall")
+// ExternalCompiler returns a `Compiler` that uses an external command to compile .py files to .pyc
+// files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag,
+// so the "py_compile" module is not appropriate.
+//
+// For example:
+//
+//     plat.Compile = ExternalCompiler("python3", "-m", "compileall")
 func ExternalCompiler(cmdline ...string) (Compiler, error) {
 	exe, err := dexec.LookPath(cmdline[0])
 	if err != nil {

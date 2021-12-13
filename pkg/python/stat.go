@@ -45,6 +45,7 @@ const (
 	ModePermOthX StatMode = 000_0001 // permission: other: execute
 )
 
+// ToGo translates pm from a Statmode to an fs.FileMode.
 func (pm StatMode) ToGo() fs.FileMode {
 	// permissions: base
 	gm := fs.FileMode(pm & 0777)
@@ -81,6 +82,7 @@ func (pm StatMode) ToGo() fs.FileMode {
 	return gm
 }
 
+// ModeFromGo translates an fs.FileMode to a StatMode.
 func ModeFromGo(gm fs.FileMode) StatMode {
 	// permissions: base
 	pm := StatMode(gm & 0777)
@@ -197,6 +199,7 @@ const (
 	FileAttributeRecallOnDataAccess // not in Python 3.9.1 stat.py
 )
 
+// ToDOS returns just the bits that are valid DOSAttribute bits.
 func (fa StatFileAttribute) ToDOS() DOSAttribute {
 	return DOSAttribute(fa & 0b00110111)
 }
