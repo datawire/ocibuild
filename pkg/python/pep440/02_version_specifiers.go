@@ -1,5 +1,10 @@
 package pep440
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Version specifiers
 // ==================
 //
@@ -34,8 +39,152 @@ package pep440
 // permitted in version specifiers, and local version labels MUST be ignored
 // entirely when checking if candidate versions match a given version
 // specifier.
+
+type Specifier []SpecifierClause
+
+func ParseSpecifier(str string) (Specifier, error) {
+	clauseStrs := strings.FieldsFunc(str, func(r rune) bool { return r == ',' })
+	ret := make(Specifier, 0, len(clauseStrs))
+	for _, clauseStr := range clauseStrs {
+		clause, err := parseSpecifierClause(clauseStr)
+		if err != nil {
+			return nil, fmt.Errorf("pep440.ParseSpecifier: %w", err)
+		}
+		ret = append(ret, clause)
+	}
+	return ret, nil
+}
+
+func (s Specifier) Match(v Version) bool {
+	for _, clause := range s {
+		if !clause.Match(v) {
+			return false
+		}
+	}
+	return true
+}
+
+type CmpOp int
+
+const (
+	CmpOp_Compatible CmpOp = iota
+	CmpOp_StrictMatch
+	CmpOp_PrefixMatch
+	CmpOp_StrictExclude
+	CmpOp_PrefixExclude
+	CmpOp_LE
+	CmpOp_GE
+	CmpOp_LT
+	CmpOp_GT
+	//CmpOp_Arbitrary
+)
+
+func (op CmpOp) String() string {
+	str, ok := map[CmpOp]string{
+		CmpOp_Compatible:    "~=",
+		CmpOp_StrictMatch:   "strict ==",
+		CmpOp_PrefixMatch:   "prefix ==",
+		CmpOp_StrictExclude: "strict !=",
+		CmpOp_PrefixExclude: "prefix !=",
+		CmpOp_LE:            "<=",
+		CmpOp_GE:            ">=",
+		CmpOp_LT:            "<",
+		CmpOp_GT:            ">",
+	}[op]
+	if !ok {
+		panic(fmt.Errorf("invalid CmpOp: %d", op))
+	}
+	return str
+}
+
+func (op CmpOp) match(s, v Version) bool {
+	fn, ok := map[CmpOp]func(s, v Version) bool{
+		CmpOp_Compatible:    matchCompatible,
+		CmpOp_StrictMatch:   matchStrictMatch,
+		CmpOp_PrefixMatch:   matchPrefixMatch,
+		CmpOp_StrictExclude: matchStrictExclude,
+		CmpOp_PrefixExclude: matchPrefixExclude,
+		CmpOp_LE:            matchLE,
+		CmpOp_GE:            matchGE,
+		CmpOp_LT:            matchLT,
+		CmpOp_GT:            matchGT,
+	}[op]
+	if !ok {
+		panic(fmt.Errorf("invalid CmpOp: %d", op))
+	}
+	return fn(s, v)
+}
+
+type SpecifierClause struct {
+	CmpOp   CmpOp
+	Version Version
+}
+
+func parseSpecifierClause(str string) (SpecifierClause, error) {
+	var ret SpecifierClause
+	str = strings.TrimSpace(str)
+	devOK := true
+	localOK := false
+	switch {
+	case strings.HasPrefix(str, "~="):
+		ret.CmpOp = CmpOp_Compatible
+		str = str[2:]
+	case strings.HasPrefix(str, "==") && !strings.HasPrefix(str, "==="):
+		ret.CmpOp = CmpOp_StrictMatch
+		str = str[2:]
+		localOK = true
+		if strings.HasSuffix(str, ".*") {
+			ret.CmpOp = CmpOp_PrefixMatch
+			str = strings.TrimSuffix(str, ".*")
+			devOK = false
+			localOK = false
+		}
+	case strings.HasPrefix(str, "!="):
+		ret.CmpOp = CmpOp_StrictExclude
+		str = str[2:]
+		localOK = true
+		if strings.HasSuffix(str, ".*") {
+			ret.CmpOp = CmpOp_PrefixExclude
+			str = strings.TrimSuffix(str, ".*")
+			devOK = false
+			localOK = false
+		}
+	case strings.HasPrefix(str, "<="):
+		ret.CmpOp = CmpOp_LE
+		str = str[2:]
+	case strings.HasPrefix(str, ">="):
+		ret.CmpOp = CmpOp_GE
+		str = str[2:]
+	case strings.HasPrefix(str, "<"):
+		ret.CmpOp = CmpOp_LT
+		str = str[2:]
+	case strings.HasPrefix(str, ">"):
+		ret.CmpOp = CmpOp_GT
+		str = str[2:]
+	case strings.HasPrefix(str, "==="):
+		return ret, fmt.Errorf("the === specifier is not supported; versions must be PEP 440 compliant")
+	}
+	v, err := ParseVersion(str)
+	if err != nil {
+		return ret, err
+	}
+	if v.Dev != nil && !devOK {
+		return ret, fmt.Errorf("dev-part not permitted in %s specifier clauses", ret.CmpOp)
+	}
+	if len(v.Local) > 0 && !localOK {
+		return ret, fmt.Errorf("local-part not permitted in %s specifier clauses", ret.CmpOp)
+	}
+	ret.Version = *v
+	return ret, nil
+}
+
+func (s SpecifierClause) Match(v Version) bool {
+	return s.CmpOp.match(s.Version, v)
+}
+
 //
 //
+
 // Compatible release
 // ------------------
 //
@@ -82,8 +231,17 @@ package pep440
 //
 //     ~= 1.4.5.0
 //     >= 1.4.5.0, == 1.4.5.*
+func matchCompatible(s, v Version) bool {
+	prefix := s
+	prefix.Pre = nil
+	prefix.Post = nil
+	prefix.Dev = nil
+	return matchGE(s, v) && matchPrefixMatch(prefix, v)
+}
+
 //
 //
+
 // Version matching
 // ----------------
 //
@@ -161,8 +319,68 @@ package pep440
 // versions, with the public version identifier being matched as described
 // above, and the local version label being checked for equivalence using a
 // strict string equality comparison.
+func matchStrictMatch(s, v Version) bool {
+	if len(s.Local) == 0 {
+		return s.PublicVersion.Cmp(v.PublicVersion) == 0
+	}
+	return s.Cmp(v) == 0
+}
+func matchPrefixMatch(_s, _v Version) bool {
+	s, v := _s.PublicVersion, _v.PublicVersion
+	const (
+		partRel = iota
+		partPre
+		partPost
+	)
+	var part int
+	switch {
+	case s.Post != nil:
+		part = partPost
+	case s.Pre != nil:
+		part = partPre
+	default:
+		part = partRel
+	}
+
+	if cmpEpoch(s, v) != 0 {
+		return false
+	}
+
+	if part == partRel {
+		return cmpRelease(s, v) <= 0
+	}
+	if cmpRelease(s, v) != 0 {
+		return false
+	}
+
+	if part == partPre {
+		order := map[string]int{
+			"a":     -3,
+			"alpha": -3,
+
+			"b":    -2,
+			"beta": -2,
+
+			"rc":      -1,
+			"c":       -1,
+			"pre":     -1,
+			"preview": -1,
+		}
+		return v.Pre != nil && order[s.Pre.L] == order[v.Pre.L]
+	}
+	if cmpPreRelease(s, v) != 0 {
+		return false
+	}
+
+	if part == partPost {
+		return v.Post != nil
+	}
+	panic("not reached")
+}
+
 //
 //
+
 // Version exclusion
 // -----------------
 //
@@ -179,6 +397,13 @@ package pep440
 //     != 1.1        # Not equal, so 1.1.post1 matches clause
 //     != 1.1.post1  # Equal, so 1.1.post1 does not match clause
 //     != 1.1.*      # Same prefix, so 1.1.post1 does not match clause
+func matchStrictExclude(s, v Version) bool {
+	return !matchStrictMatch(s, v)
+}
+func matchPrefixExclude(s, v Version) bool {
+	return !matchPrefixMatch(s, v)
+}
+
 //
 //
 // Inclusive ordered comparison
@@ -196,6 +421,13 @@ package pep440
 // ensure the release segments are compared with the same length.
 //
 // Local version identifiers are NOT permitted in this version specifier.
+func matchLE(s, v Version) bool {
+	return s.Cmp(v) >= 0
+}
+func matchGE(s, v Version) bool {
+	return s.Cmp(v) <= 0
+}
+
 //
 //
 // Exclusive ordered comparison
@@ -226,6 +458,13 @@ package pep440
 // ensure the release segments are compared with the same length.
 //
 // Local version identifiers are NOT permitted in this version specifier.
+func matchLT(s, v Version) bool {
+	return s.Cmp(v) > 0
+}
+func matchGT(s, v Version) bool {
+	return s.Cmp(v) < 0
+}
+
 //
 //
 // Arbitrary equality
@@ -283,6 +522,56 @@ package pep440
 //
 // Post-releases and final releases receive no special treatment in version
 // specifiers - they are always included unless explicitly excluded.
+
+type PreReleaseBehavior struct {
+	AllowAll  bool
+	AllowList []Version
+}
+
+func (prereleases *PreReleaseBehavior) allow(v Version) bool {
+	if !v.IsPreRelease() {
+		return true
+	}
+	if prereleases != nil {
+		if prereleases.AllowAll {
+			return true
+		}
+		for _, item := range prereleases.AllowList {
+			if item.Cmp(v) == 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s Specifier) Select(choices []Version, prereleases *PreReleaseBehavior) *Version {
+	var best *Version
+	var bestPrerelease *Version
+	for _, choice := range choices {
+		if s.Match(choice) {
+			if prereleases.allow(choice) {
+				if best == nil || best.Cmp(choice) < 0 {
+					v := choice
+					best = &v
+				}
+			} else {
+				if bestPrerelease == nil || bestPrerelease.Cmp(choice) < 0 {
+					v := choice
+					bestPrerelease = &v
+				}
+			}
+		}
+	}
+	if best != nil {
+		return best
+	}
+	if bestPrerelease != nil {
+		return bestPrerelease
+	}
+	return nil
+}
+
 //
 //
 // Examples

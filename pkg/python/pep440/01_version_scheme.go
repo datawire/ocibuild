@@ -44,6 +44,7 @@ type Version = LocalVersion
 // format, as well as a more permissive regular expression accepting inputs that
 // may require subsequent normalization.
 
+// ParseVersion parses a string to a Version object, performing normalization.
 func ParseVersion(str string) (*Version, error) {
 	v, err := parseVersion(str) // the routine from Appendix B
 	if err != nil {
@@ -91,6 +92,7 @@ func (v PublicVersion) writeTo(ret *strings.Builder) {
 	}
 }
 
+// String implements fmt.Stringer.  String does not perform any normalization.
 func (v PublicVersion) String() string {
 	var ret strings.Builder
 	v.writeTo(&ret)
@@ -159,11 +161,13 @@ func (v PublicVersion) String() string {
 //
 // Local version labels MUST start and end with an ASCII letter or digit.
 //
+
 type LocalVersion struct {
 	PublicVersion
 	Local []intstr.IntOrString
 }
 
+// String implements fmt.Stringer.  String does not perform any normalization.
 func (v LocalVersion) String() string {
 	var ret strings.Builder
 	v.PublicVersion.writeTo(&ret)
@@ -231,6 +235,10 @@ func cmpLocal(a, b LocalVersion) int {
 	return 0
 }
 
+// Cmp returns a number < 0 if version 'a' is less than version 'b', > 0 if 'a' is greater than 'b',
+// or 0 if they are equal.  This is similar to the C-language strcmp.  You may think of this as
+// returning the result of arithmetic subtraction "a-b"; though only the sign is defined; the
+// magnitude may be anything.
 func (a LocalVersion) Cmp(b LocalVersion) int {
 	if d := a.PublicVersion.Cmp(b.PublicVersion); d != 0 {
 		return d
@@ -524,6 +532,10 @@ func cmpPostRelease(a, b PublicVersion) int {
 //
 //
 
+func (v PublicVersion) IsPreRelease() bool {
+	return v.Pre != nil || v.Dev != nil
+}
+
 func cmpDevRelease(a, b PublicVersion) int {
 	switch {
 	case a.Dev == nil && b.Dev == nil:
@@ -816,6 +828,10 @@ func (v LocalVersion) Normalize() (*LocalVersion, error) {
 //    of Python distributions deciding on a versioning scheme.
 //
 
+// Cmp returns a number < 0 if version 'a' is less than version 'b', > 0 if 'a' is greater than 'b',
+// or 0 if they are equal.  This is similar to the C-language strcmp.  You may think of this as
+// returning the result of arithmetic subtraction "a-b"; though only the sign is defined; the
+// magnitude may be anything.
 func (a PublicVersion) Cmp(b PublicVersion) int {
 	// The epoch segment of version identifiers MUST be sorted according to the
 	// numeric value of the given epoch. If no epoch segment is present, the
