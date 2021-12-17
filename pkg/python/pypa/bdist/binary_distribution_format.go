@@ -16,6 +16,8 @@ import (
 	"io"
 	"net/textproto"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/datawire/dlib/dlog"
@@ -24,6 +26,8 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python/pep425"
+	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
 
 //
@@ -362,6 +366,87 @@ func rewritePython(plat Platform, vfs map[string]fsutil.FileReference, vfsTypes 
 // The last three components of the filename before the extension are
 // called "compatibility tags."  The compatibility tags express the
 // package's basic interpreter requirements and are detailed in PEP 425.
+
+type FileNameData struct {
+	Distribution     string
+	Version          pep440.Version
+	BuildTag         *BuildTag
+	CompatibilityTag pep425.Tag
+}
+
+var reFilename = regexp.MustCompile(regexp.MustCompile(`\s+`).ReplaceAllString(`
+		^(?P<distribution>[^-]+)
+		-(?P<version>[^-]+)
+		(?:-(?P<build_n>[0-9]+)(?P<build_l>[^-0-9][^-]*)?)?
+		-(?P<python>[^-]+)
+		-(?P<abi>[^-]+)
+		-(?P<platform>[^-]+)
+		\.whl$`, ``))
+
+func ParseFilename(filename string) (*FileNameData, error) {
+	m := reFilename.FindStringSubmatch(filename)
+	if m == nil {
+		return nil, fmt.Errorf("invalid wheel filename: %q", filename)
+	}
+
+	var ret FileNameData
+
+	ret.Distribution = m[reFilename.SubexpIndex("distribution")]
+
+	ver, err := pep440.ParseVersion(m[reFilename.SubexpIndex("version")])
+	if err != nil {
+		return nil, fmt.Errorf("invalid wheel filename: %q: %w", filename, err)
+	}
+	ret.Version = *ver
+
+	if buildN := m[reFilename.SubexpIndex("build_n")]; buildN != "" {
+		n, _ := strconv.Atoi(buildN)
+		ret.BuildTag = &BuildTag{
+			Int: n,
+			Str: m[reFilename.SubexpIndex("build_l")],
+		}
+	}
+
+	ret.CompatibilityTag = pep425.Tag{
+		Python:   m[reFilename.SubexpIndex("python")],
+		ABI:      m[reFilename.SubexpIndex("abi")],
+		Platform: m[reFilename.SubexpIndex("platform")],
+	}
+
+	return &ret, nil
+}
+
+type BuildTag struct {
+	Int int
+	Str string
+}
+
+func (t BuildTag) String() string {
+	return fmt.Sprintf("%d%s", t.Int, t.Str)
+}
+
+func (a *BuildTag) Cmp(b *BuildTag) int {
+	switch {
+	case a == nil && b == nil:
+		return 0
+	case a == nil && b != nil:
+		return -1
+	case a != nil && b == nil:
+		return 1
+	}
+	if d := a.Int - b.Int; d != 0 {
+		return d
+	}
+	switch {
+	case a.Str < b.Str:
+		return -1
+	case a.Str > b.Str:
+		return 1
+	default:
+		return 0
+	}
+}
+
 //
 // Escaping and Unicode
 // ''''''''''''''''''''
@@ -369,16 +454,44 @@ func rewritePython(plat Platform, vfs map[string]fsutil.FileReference, vfsTypes 
 // As the components of the filename are separated by a dash (``-``, HYPHEN-MINUS),
 // this character cannot appear within any component. This is handled as follows:
 //
-// - In distribution names, any run of ``-_.`` characters (HYPHEN-MINUS, LOW LINE
-//   and FULL STOP) should be replaced with ``_`` (LOW LINE). This is equivalent
-//   to :pep:`503` normalisation followed by replacing ``-`` with ``_``.
-// - Version numbers should be normalised according to :pep:`440`. Normalised
-//   version numbers cannot contain ``-``.
-// - The remaining components may not contain ``-`` characters, so no escaping
-//   is necessary.
-//
-// Tools producing wheels should verify that the filename components do not contain
-// ``-``, as the resulting file may not be processed correctly if they do.
+
+func GenerateFilename(data FileNameData) (string, error) {
+	var ret strings.Builder
+	// - In distribution names, any run of ``-_.`` characters (HYPHEN-MINUS, LOW LINE
+	//   and FULL STOP) should be replaced with ``_`` (LOW LINE). This is equivalent
+	//   to :pep:`503` normalisation followed by replacing ``-`` with ``_``.
+	ret.WriteString(regexp.MustCompile("[-_.]+").ReplaceAllLiteralString(data.Distribution, "_"))
+	// - Version numbers should be normalised according to :pep:`440`. Normalised
+	//   version numbers cannot contain ``-``.
+	ver, err := data.Version.Normalize()
+	if err != nil {
+		return "", err
+	}
+	ret.WriteString("-")
+	ret.WriteString(ver.String())
+	// - The remaining components may not contain ``-`` characters, so no escaping
+	//   is necessary.
+	//
+	// Tools producing wheels should verify that the filename components do not contain
+	// ``-``, as the resulting file may not be processed correctly if they do.
+	if data.BuildTag != nil {
+		build := data.BuildTag.String()
+		if strings.Contains(build, "-") {
+			return "", fmt.Errorf("invalid build tag: contains dash: %q", build)
+		}
+		ret.WriteString("-")
+		ret.WriteString(build)
+	}
+	compat := data.CompatibilityTag.String()
+	if strings.Count(compat, "-") != 2 {
+		return "", fmt.Errorf("invalid compatibility tag: %q", compat)
+	}
+	ret.WriteString("-")
+	ret.WriteString(compat)
+	ret.WriteString(".whl")
+	return ret.String(), nil
+}
+
 //
 // The archive filename is Unicode.  It will be some time before the tools
 // are updated to support non-ASCII filenames, but they are supported in

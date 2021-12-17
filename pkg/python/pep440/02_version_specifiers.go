@@ -55,6 +55,14 @@ func ParseSpecifier(str string) (Specifier, error) {
 	return ret, nil
 }
 
+func (s Specifier) String() string {
+	clauses := make([]string, 0, len(s))
+	for _, clause := range s {
+		clauses = append(clauses, clause.String())
+	}
+	return strings.Join(clauses, ",")
+}
+
 func (s Specifier) Match(v Version) bool {
 	for _, clause := range s {
 		if !clause.Match(v) {
@@ -176,6 +184,24 @@ func parseSpecifierClause(str string) (SpecifierClause, error) {
 	}
 	ret.Version = *v
 	return ret, nil
+}
+
+func (s SpecifierClause) String() string {
+	opStr, ok := map[CmpOp]string{
+		CmpOp_Compatible:    "~=",
+		CmpOp_StrictMatch:   "==",
+		CmpOp_PrefixMatch:   "==",
+		CmpOp_StrictExclude: "!=",
+		CmpOp_PrefixExclude: "!=",
+		CmpOp_LE:            "<=",
+		CmpOp_GE:            ">=",
+		CmpOp_LT:            "<",
+		CmpOp_GT:            ">",
+	}[s.CmpOp]
+	if !ok {
+		panic(fmt.Errorf("invalid CmpOp: %d", s.CmpOp))
+	}
+	return opStr + s.Version.String()
 }
 
 func (s SpecifierClause) Match(v Version) bool {
@@ -523,42 +549,61 @@ func matchGT(s, v Version) bool {
 // Post-releases and final releases receive no special treatment in version
 // specifiers - they are always included unless explicitly excluded.
 
-type PreReleaseBehavior struct {
-	AllowAll  bool
+type ExclusionBehavior interface {
+	Allow(v Version) bool
+}
+
+// AllowAll is an implementation of ExclusionBehavior.
+type AllowAll struct{}
+
+func (_ AllowAll) Allow(_ Version) bool {
+	return true
+}
+
+// ExcludePreReleases is an implementation of ExclusionBehavior.
+type ExcludePreReleases struct {
 	AllowList []Version
 }
 
-func (prereleases *PreReleaseBehavior) allow(v Version) bool {
+func (prereleases ExcludePreReleases) Allow(v Version) bool {
 	if !v.IsPreRelease() {
 		return true
 	}
-	if prereleases != nil {
-		if prereleases.AllowAll {
+	for _, item := range prereleases.AllowList {
+		if item.Cmp(v) == 0 {
 			return true
-		}
-		for _, item := range prereleases.AllowList {
-			if item.Cmp(v) == 0 {
-				return true
-			}
 		}
 	}
 	return false
 }
 
-func (s Specifier) Select(choices []Version, prereleases *PreReleaseBehavior) *Version {
+// MultiExcluder is an implementation of ExclusionBehavior that ANDs multiple other
+// ExclusionBehaviors together; anly allowing a version if all of the behaviors allow it.
+type MultiExcluder []ExclusionBehavior
+
+func (m MultiExcluder) Allow(v Version) bool {
+	for _, e := range m {
+		if !e.Allow(v) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s Specifier) Select(choices []Version, exclusionBehavior ExclusionBehavior) *Version {
 	var best *Version
-	var bestPrerelease *Version
+	var bestExcluded *Version
 	for _, choice := range choices {
 		if s.Match(choice) {
-			if prereleases.allow(choice) {
+			if exclusionBehavior == nil || !exclusionBehavior.Allow(choice) {
 				if best == nil || best.Cmp(choice) < 0 {
 					v := choice
 					best = &v
 				}
 			} else {
-				if bestPrerelease == nil || bestPrerelease.Cmp(choice) < 0 {
+				if bestExcluded == nil || bestExcluded.Cmp(choice) < 0 {
 					v := choice
-					bestPrerelease = &v
+					bestExcluded = &v
 				}
 			}
 		}
@@ -566,8 +611,8 @@ func (s Specifier) Select(choices []Version, prereleases *PreReleaseBehavior) *V
 	if best != nil {
 		return best
 	}
-	if bestPrerelease != nil {
-		return bestPrerelease
+	if bestExcluded != nil {
+		return bestExcluded
 	}
 	return nil
 }

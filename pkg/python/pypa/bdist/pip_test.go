@@ -105,52 +105,46 @@ func TestPIP(t *testing.T) {
 		t.SkipNow()
 	}
 
-	dirents, err := os.ReadDir("testdata")
-	require.NoError(t, err)
-	for _, dirent := range dirents {
-		name := dirent.Name()
-		if !(strings.HasSuffix(name, ".whl") && dirent.Type().IsRegular()) {
-			continue
+	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
+		ctx := dlog.NewTestContext(t, true)
+		tmpdir := t.TempDir()
+
+		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
+
+		// pip reference install
+		scheme, err := pipInstall(ctx,
+			filepath.Join(tmpdir, filename), // wheelfile
+			filepath.Join(tmpdir, "dst"))    // dest dir
+		require.NoError(t, err)
+		prefix, err := filepath.Rel("/", tmpdir)
+		require.NoError(t, err)
+		prefix = filepath.ToSlash(prefix)
+		expLayer, err := dir.LayerFromDir(tmpdir, prefix)
+		require.NoError(t, err)
+
+		// build platform data based on what pip did
+		compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
+		require.NoError(t, err)
+		usr, err := user.Current()
+		require.NoError(t, err)
+		grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
+		require.NoError(t, err)
+		plat := bdist.Platform{
+			ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
+			GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
+			Scheme:           scheme,
+			UID:              os.Getuid(),
+			GID:              os.Getgid(),
+			UName:            usr.Username,
+			GName:            grp.Name,
+			PyCompile:        compiler,
 		}
-		t.Run(name, func(t *testing.T) {
-			ctx := dlog.NewTestContext(t, true)
-			tmpdir := t.TempDir()
 
-			// pip reference install
-			scheme, err := pipInstall(ctx,
-				filepath.Join("testdata", name), // wheelfile
-				filepath.Join(tmpdir, "dst"))    // dest dir
-			require.NoError(t, err)
-			prefix, err := filepath.Rel("/", tmpdir)
-			require.NoError(t, err)
-			prefix = filepath.ToSlash(prefix)
-			expLayer, err := dir.LayerFromDir(tmpdir, prefix)
-			require.NoError(t, err)
+		// our own install
+		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename))
+		require.NoError(t, err)
 
-			// build platform data based on what pip did
-			compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
-			require.NoError(t, err)
-			usr, err := user.Current()
-			require.NoError(t, err)
-			grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
-			require.NoError(t, err)
-			plat := bdist.Platform{
-				ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
-				GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
-				Scheme:           scheme,
-				UID:              os.Getuid(),
-				GID:              os.Getgid(),
-				UName:            usr.Username,
-				GName:            grp.Name,
-				PyCompile:        compiler,
-			}
-
-			// our own install
-			actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join("testdata", name))
-			require.NoError(t, err)
-
-			// compare them
-			testutil.AssertEqualLayers(t, expLayer, actLayer)
-		})
-	}
+		// compare them
+		testutil.AssertEqualLayers(t, expLayer, actLayer)
+	})
 }

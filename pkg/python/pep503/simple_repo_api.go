@@ -22,12 +22,16 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+
+	"github.com/datawire/ocibuild/pkg/python/pep345"
+	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
 
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 	UserAgent  string
+	Python     *pep440.Version
 	HTMLHook   func(context.Context, *html.Node) error
 }
 
@@ -268,6 +272,15 @@ func (c Client) ListPackageFiles(ctx context.Context, pkgname string) ([]FileLin
 	}
 	links := make([]FileLink, 0, len(rawLinks))
 	for _, link := range rawLinks {
+		if c.Python != nil {
+			if reqPy := link.DataAttrs["data-requires-python"]; reqPy != "" {
+				ok, err := pep345.HaveRequiredPython(*c.Python, reqPy)
+				if err == nil && !ok {
+					continue
+				}
+			}
+		}
+
 		links = append(links, FileLink{
 			client: c,
 			Link:   link,
