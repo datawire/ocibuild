@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -14,6 +15,7 @@ import (
 
 func init() {
 	var argBase string
+	var argTag string
 	cmd := &cobra.Command{
 		Use:   "build [flags] IN_LAYERFILES... >OUT_IMAGEFILE",
 		Short: "Combine layers in to a complete image",
@@ -23,6 +25,14 @@ func init() {
 			if argBase != "" {
 				var err error
 				base, err = fsutil.OpenImage(argBase)
+				if err != nil {
+					return err
+				}
+			}
+			var tag name.Reference
+			if argTag != "" {
+				var err error
+				tag, err = name.NewTag(argTag)
 				if err != nil {
 					return err
 				}
@@ -41,13 +51,14 @@ func init() {
 			if err != nil {
 				return err
 			}
-			if err := ociv1tarball.Write(nil, img, os.Stdout); err != nil {
+			if err := ociv1tarball.Write(tag, img, os.Stdout); err != nil {
 				return err
 			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&argBase, "base", "", "Use `IN_IMAGEFILE` as the base of the image")
+	cmd.Flags().StringVarP(&argTag, "tag", "t", "", "Tag the resulting image as `TAG`")
 
 	argparserImage.AddCommand(cmd)
 }
