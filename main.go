@@ -42,6 +42,13 @@ var (
 		Args: cliutil.OnlySubcommands,
 		RunE: cliutil.RunSubcommands,
 	}
+	argparserPython = &cobra.Command{
+		Use:   "python {[flags]|SUBCOMMAND...}",
+		Short: "Interact with Python without the target environment",
+
+		Args: cliutil.OnlySubcommands,
+		RunE: cliutil.RunSubcommands,
+	}
 )
 
 func init() {
@@ -49,6 +56,7 @@ func init() {
 	argparser.SetHelpTemplate(cliutil.HelpTemplate)
 	argparser.AddCommand(argparserImage)
 	argparser.AddCommand(argparserLayer)
+	argparser.AddCommand(argparserPython)
 }
 
 func main() {

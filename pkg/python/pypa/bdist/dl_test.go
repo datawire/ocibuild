@@ -126,10 +126,14 @@ func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, c
 	for _, str := range pythonTagStrs {
 		parts := strings.Split(str, "-")
 		require.Equal(t, 3, len(parts))
-		pythonTags = append(pythonTags, pep425.Tag{parts[0], parts[1], parts[2]})
+		pythonTags = append(pythonTags, pep425.Tag{
+			Python:   parts[0],
+			ABI:      parts[1],
+			Platform: parts[2],
+		})
 	}
 
-	client := simple_repo_api.NewClient(*pythonVersion, pythonTags)
+	client := simple_repo_api.NewClient(pythonVersion, pythonTags)
 	for _, testDownload := range downloads {
 		testDownload := testDownload
 		t.Run(testDownload.ExpectedFilename, func(t *testing.T) {

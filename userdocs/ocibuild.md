@@ -16,4 +16,5 @@ ocibuild {[flags]|SUBCOMMAND...}
 
 * [ocibuild image](ocibuild_image.md)	 - Manipulate complete images
 * [ocibuild layer](ocibuild_layer.md)	 - Manipulate individual layers for use in an image
+* [ocibuild python](ocibuild_python.md)	 - Interact with Python without the target environment
 

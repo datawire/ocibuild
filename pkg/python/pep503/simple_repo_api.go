@@ -35,9 +35,11 @@ type Client struct {
 	HTMLHook   func(context.Context, *html.Node) error
 }
 
+const PyPIBaseURL = "https://pypi.org/simple/"
+
 func (c *Client) fillDefaults() {
 	if c.BaseURL == "" {
-		c.BaseURL = "https://pypi.org/simple/"
+		c.BaseURL = PyPIBaseURL
 	}
 	if c.HTTPClient == nil {
 		c.HTTPClient = http.DefaultClient
@@ -152,6 +154,9 @@ type Link struct {
 
 func (c Client) getHTML5Index(ctx context.Context, requestURL string) ([]Link, error) {
 	location, content, err := c.get(ctx, requestURL)
+	if err != nil {
+		return nil, err
+	}
 
 	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {

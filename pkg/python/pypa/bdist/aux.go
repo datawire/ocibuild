@@ -66,7 +66,7 @@ type Platform struct {
 	UName string
 	GName string
 
-	PyCompile python.Compiler
+	PyCompile python.Compiler `json:"-"`
 }
 
 type Scheme struct {

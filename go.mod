@@ -12,6 +12,7 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	k8s.io/apimachinery v0.20.6
+	sigs.k8s.io/yaml v1.2.0
 )
 
 require (
