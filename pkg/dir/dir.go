@@ -1,4 +1,4 @@
-// Package dir deals with creating a layer from a directory
+// Package dir deals with creating a layer from a directory.
 package dir
 
 import (
