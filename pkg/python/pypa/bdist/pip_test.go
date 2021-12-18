@@ -116,10 +116,10 @@ func TestPIP(t *testing.T) {
 			filepath.Join(tmpdir, filename), // wheelfile
 			filepath.Join(tmpdir, "dst"))    // dest dir
 		require.NoError(t, err)
-		prefix, err := filepath.Rel("/", tmpdir)
+		prefix, err := filepath.Rel("/", filepath.Join(tmpdir, "dst"))
 		require.NoError(t, err)
 		prefix = filepath.ToSlash(prefix)
-		expLayer, err := dir.LayerFromDir(tmpdir, prefix)
+		expLayer, err := dir.LayerFromDir(filepath.Join(tmpdir, "dst"), prefix)
 		require.NoError(t, err)
 
 		// build platform data based on what pip did

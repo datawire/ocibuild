@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/textproto"
 	"path"
 	"regexp"
@@ -148,11 +149,36 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts
 		dstDir = plat.Scheme.PlatLib
 	}
 	vfs := make(map[string]fsutil.FileReference)
-	for _, file := range wh.zip.File {
-		create(vfs, path.Join(dstDir, file.FileHeader.Name), &zipEntry{
-			header: file.FileHeader,
-			open:   file.Open,
+	// Use fs.WalkDir instead of iterating over wh.zip.File so that it will figure out
+	// synthesizing missing directories for us.
+	if err := fs.WalkDir(wh.zip, ".", func(fullname string, dirent fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		fileinfo, err := dirent.Info()
+		if err != nil {
+			return err
+		}
+		header, err := zip.FileInfoHeader(fileinfo)
+		if err != nil {
+			return err
+		}
+		if fileinfo.IsDir() && fileinfo.ModTime().IsZero() {
+			// synthetic directory; these are always chmod 0555, but we want them to be
+			// chmod 0755.
+			externalAttrs := python.ParseZIPExternalAttributes(header.ExternalAttrs)
+			externalAttrs.UNIX |= 0755
+			header.ExternalAttrs = externalAttrs.Raw()
+		}
+		create(vfs, path.Join(dstDir, fullname), &zipEntry{
+			header: *header,
+			open: func() (io.ReadCloser, error) {
+				return wh.zip.Open(fullname)
+			},
 		})
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	//
 	// - Spread.

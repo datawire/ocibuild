@@ -89,7 +89,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 
 		// Run the compiler
 		cmd := dexec.CommandContext(ctx, exe, append(cmdline[1:],
-			"-p", path.Dir(in.FullName()), // prepend-dir for the in-.pyc filename
+			"-p", path.Join("/", path.Dir(in.FullName())), // prepend-dir for the in-.pyc filename
 			in.Name(), // file to compile
 		)...)
 		cmd.Dir = tmpdir
@@ -107,23 +107,29 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			if e != nil {
 				return e
 			}
-			if d.IsDir() || !strings.HasSuffix(p, ".pyc") {
+			if p == "." {
+				return nil
+			}
+			if !strings.HasSuffix(p, ".pyc") && !d.IsDir() {
 				return nil
 			}
 			info, err := d.Info()
 			if err != nil {
 				return err
 			}
-			fh, err := dirFS.Open(p)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = fh.Close()
-			}()
-			content, err := io.ReadAll(fh)
-			if err != nil {
-				return err
+			var content []byte
+			if !d.IsDir() {
+				fh, err := dirFS.Open(p)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					_ = fh.Close()
+				}()
+				content, err = io.ReadAll(fh)
+				if err != nil {
+					return err
+				}
 			}
 			fullname := path.Join(path.Dir(in.FullName()), p)
 			vfs[fullname] = &fileReference{

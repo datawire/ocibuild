@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"text/tabwriter"
@@ -11,6 +13,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pmezard/go-difflib/difflib"
+
+	"github.com/datawire/ocibuild/pkg/fsutil"
 )
 
 func DumpLayerFull(layer ociv1.Layer) (str string, err error) {
@@ -136,8 +140,29 @@ func DumpLayerListing(layer ociv1.Layer) (str string, err error) {
 	return ret.String(), nil
 }
 
+func writeLayerToFile(t *testing.T, filename string, layer ociv1.Layer) {
+	t.Helper()
+	w, err := os.Create(filename)
+	if err != nil {
+		t.Errorf("error writing layer to file %q: %v", filename, err)
+	}
+	defer func() {
+		if err := w.Close(); err != nil {
+			t.Errorf("error writing layer to file %q: %v", filename, err)
+		}
+	}()
+
+	if err := fsutil.WriteLayer(layer, w); err != nil {
+		t.Errorf("error writing layer to file %q: %v", filename, err)
+	}
+}
+
 func AssertEqualLayers(t *testing.T, exp, act ociv1.Layer) bool {
 	t.Helper()
+	if save, _ := strconv.ParseBool(os.Getenv("GOTEST_OCIBUILD_SAVELAYERS")); save {
+		writeLayerToFile(t, "exp.layer.tar", exp)
+		writeLayerToFile(t, "act.layer.tar", act)
+	}
 
 	// First just compare the listings, in order to "fail fast" and give more readable output.
 	expStr, err := DumpLayerListing(exp)
