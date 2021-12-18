@@ -1,6 +1,6 @@
 ## ocibuild layer gobuild
 
-Create a layer from a directory
+Create a layer of Go binaries
 
 ### Synopsis
 

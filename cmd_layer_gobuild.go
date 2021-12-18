@@ -11,7 +11,7 @@ import (
 func init() {
 	cmd := &cobra.Command{
 		Use:   "gobuild [flags] PACKAGES... >OUT_LAYERFILE",
-		Short: "Create a layer from a directory",
+		Short: "Create a layer of Go binaries",
 		Long: "Works more or less like `go build`.  Passes through env-vars (except for " +
 			"GOOS and GOARCH; naturally those need to be set to reflect the target " +
 			"layer).  Use GOFLAGS to pass in extra flags.",

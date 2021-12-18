@@ -16,7 +16,7 @@ ocibuild layer {[flags]|SUBCOMMAND...}
 
 * [ocibuild](ocibuild.md)	 - Manipulate OCI/Docker images and layers as regular files
 * [ocibuild layer dir](ocibuild_layer_dir.md)	 - Create a layer from a directory
-* [ocibuild layer gobuild](ocibuild_layer_gobuild.md)	 - Create a layer from a directory
+* [ocibuild layer gobuild](ocibuild_layer_gobuild.md)	 - Create a layer of Go binaries
 * [ocibuild layer squash](ocibuild_layer_squash.md)	 - Squash several layers in to a single layer
 * [ocibuild layer wheel](ocibuild_layer_wheel.md)	 - Turn a Python wheel in to a layer
 
