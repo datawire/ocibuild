@@ -1,4 +1,4 @@
-// Package pep592 implements Python PEP 592 -- Adding "Yank" Support to the Simple API.
+// Package pep592 implements PEP 592 -- Adding "Yank" Support to the Simple API.
 //
 // https://www.python.org/dev/peps/pep-0592/
 package pep592

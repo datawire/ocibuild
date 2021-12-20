@@ -77,9 +77,7 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("%w in wheel zip archive: %q", fs.ErrNotExist, filename)
 }
 
-type PostInstallHook func(ctx context.Context, vfs map[string]fsutil.FileReference) error
-
-func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hooks []PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
 		return nil, err
@@ -99,13 +97,13 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hook
 		return nil, err
 	}
 
-	vfs, err := wh.installToVFS(ctx, plat)
+	vfs, installedDistInfoDir, err := wh.installToVFS(ctx, plat)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, hook := range hooks {
-		if err := hook(ctx, vfs); err != nil {
+	if hook != nil {
+		if err := hook(ctx, vfs, installedDistInfoDir); err != nil {
 			return nil, err
 		}
 	}
@@ -157,7 +155,7 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hook
 // =======
 //
 
-func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fsutil.FileReference, error) {
+func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fsutil.FileReference, string, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -168,16 +166,16 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 	//   a. Parse ``distribution-1.0.dist-info/WHEEL``.
 	metadata, err := wh.parseDistInfoWheel()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	//   b. Check that installer is compatible with Wheel-Version.  Warn if
 	//      minor version is greater, abort if major version is greater.
 	wheelVersion, err := parseVersion(metadata.Get("Wheel-Version"))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if wheelVersion[0] > specVersion[0] {
-		return nil, fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
+		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
 	}
 	if vercmp(wheelVersion, specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
@@ -221,7 +219,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 		})
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	//
 	// - Spread.
@@ -236,7 +234,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 	//      ``distutils.command.install``.
 	distInfoDir, err := wh.distInfoDir()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	vfsTypes := make(map[string]string)
 	dataDir := path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data")
@@ -265,18 +263,18 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 		case "data":
 			dstDataDir = plat.Scheme.Data
 		default:
-			return nil, fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
+			return nil, "", fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
 		}
 		newFullName := path.Join(dstDataDir, rest)
 		vfsTypes[newFullName] = key
 		if err := rename(vfs, fullName, newFullName); err != nil {
-			return nil, err
+			return nil, "", err
 		}
 	}
 	//   c. If applicable, update scripts starting with ``#!python`` to point
 	//      to the correct interpreter.
 	if err := rewritePython(plat, vfs, vfsTypes); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	//   d. Update ``distribution-1.0.dist-info/RECORD`` with the installed
 	//      paths.
@@ -294,14 +292,14 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 		}
 		newFiles, err := plat.PyCompile(ctx, file)
 		if err != nil {
-			return nil, fmt.Errorf("py_compile: %w", err)
+			return nil, "", fmt.Errorf("py_compile: %w", err)
 		}
 		for _, newFile := range newFiles {
 			vfs[newFile.FullName()] = newFile
 		}
 	}
 
-	return vfs, nil
+	return vfs, path.Join(dstDir, distInfoDir), nil
 }
 
 //

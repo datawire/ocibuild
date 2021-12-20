@@ -1,4 +1,4 @@
-//Package simple_repo_api implementes the PyPA Simple repository API.
+// Package simple_repo_api implementes the PyPA Simple repository API.
 //
 // https://packaging.python.org/specifications/simple-repository-api/
 package simple_repo_api

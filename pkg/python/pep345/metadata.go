@@ -1,4 +1,4 @@
-// Package pep345 implements Python PEP 345 -- Metadata for Python Software Packages 1.2.
+// Package pep345 implements PEP 345 -- Metadata for Python Software Packages 1.2.
 //
 // Well, just enough of PEP 345 to implement PEP 503.
 //

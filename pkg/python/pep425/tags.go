@@ -1,4 +1,4 @@
-// Package pep425 implements Python PEP 425 -- Database of Installed Python Distributions.
+// Package pep425 implements PEP 425 -- Database of Installed Python Distributions.
 //
 // https://www.python.org/dev/peps/pep-0425/
 package pep425

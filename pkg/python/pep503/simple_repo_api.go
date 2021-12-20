@@ -1,4 +1,4 @@
-// Package pep503 implements Python PEP 503 -- Simple Repository API.
+// Package pep503 implements PEP 503 -- Simple Repository API.
 //
 // https://www.python.org/dev/peps/pep-0503/
 package pep503

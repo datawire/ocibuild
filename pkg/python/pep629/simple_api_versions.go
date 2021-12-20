@@ -1,4 +1,4 @@
-// Package pep629 implements Python PEP 629 -- Versioning PyPI's Simple API.
+// Package pep629 implements PEP 629 -- Versioning PyPI's Simple API.
 //
 // https://www.python.org/dev/peps/pep-0629/
 package pep629

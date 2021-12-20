@@ -2,12 +2,14 @@ package bdist
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"path"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 )
 
@@ -148,5 +150,21 @@ func (wh *wheel) distInfoDir() (string, error) {
 		}
 		sort.Strings(list)
 		return "", fmt.Errorf("multiple .dist-info directories found: %v", list)
+	}
+}
+
+type PostInstallHook func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
+
+func PostInstallHooks(hooks ...PostInstallHook) PostInstallHook {
+	if len(hooks) == 0 {
+		return nil
+	}
+	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+		for _, hook := range hooks {
+			if err := hook(ctx, vfs, installedDistInfoDir); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }

@@ -1,7 +1,6 @@
 package python
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"io/fs"
@@ -17,20 +16,6 @@ import (
 
 // A Compiler is a function that takes an source .py file, and emits 1 or more compiled .pyc files.
 type Compiler func(context.Context, fsutil.FileReference) (map[string]fsutil.FileReference, error)
-
-type fileReference struct {
-	fs.FileInfo
-	fullname string
-	content  []byte
-}
-
-func (fr *fileReference) FullName() string { return fr.fullname }
-func (fr *fileReference) Name() string     { return path.Base(fr.fullname) }
-func (fr *fileReference) Open() (io.ReadCloser, error) {
-	return io.NopCloser(bytes.NewReader(fr.content)), nil
-}
-
-var _ fsutil.FileReference = (*fileReference)(nil)
 
 // ExternalCompiler returns a `Compiler` that uses an external command to compile .py files to .pyc
 // files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag,
@@ -132,10 +117,10 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 				}
 			}
 			fullname := path.Join(path.Dir(in.FullName()), p)
-			vfs[fullname] = &fileReference{
-				FileInfo: info,
-				fullname: fullname,
-				content:  content,
+			vfs[fullname] = &fsutil.InMemFileReference{
+				FileInfo:  info,
+				MFullName: fullname,
+				MContent:  content,
 			}
 			return nil
 		})

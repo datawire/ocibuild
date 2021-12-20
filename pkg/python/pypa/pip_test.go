@@ -17,7 +17,10 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/dir"
 	"github.com/datawire/ocibuild/pkg/python"
+	"github.com/datawire/ocibuild/pkg/python/pep376"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
+	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
+	"github.com/datawire/ocibuild/pkg/python/pypa/recording_installs"
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
@@ -141,7 +144,17 @@ func TestPIP(t *testing.T) {
 		}
 
 		// our own install
-		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename), nil)
+		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename), bdist.PostInstallHooks(
+			pep376.RecordRequested(""),
+			recording_installs.Record(
+				"sha256",
+				"pip",
+				&direct_url.DirectURL{
+					URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+					ArchiveInfo: &direct_url.ArchiveInfo{},
+				},
+			),
+		))
 		require.NoError(t, err)
 
 		// compare them
