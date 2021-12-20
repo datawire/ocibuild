@@ -50,13 +50,17 @@ install: install-man
 .PHONY: install
 
 $(DESTDIR)$(bindir)/$(name): $(name)
-	install -Dm755 $< $@
+	mkdir -p $(@D)
+	install -m755 $< $@
 $(DESTDIR)$(bash_completion_dir)/$(name): completion.bash
-	install -Dm644 $< $@
+	mkdir -p $(@D)
+	install -m644 $< $@
 $(DESTDIR)$(fish_completion_dir)/$(name).fish: completion.fish
-	install -Dm644 $< $@
+	mkdir -p $(@D)
+	install -m644 $< $@
 $(DESTDIR)$(zsh_completion_dir)/_$(name): completion.zsh
-	install -Dm644 $< $@
+	mkdir -p $(@D)
+	install -m644 $< $@
 
 install-man: man
 	install -Dm644 -t $(DESTDIR)$(man1dir) man/*.1
@@ -77,7 +81,8 @@ lint: tools/bin/golangci-lint
 tools/bin/%: tools/src/%/pin.go tools/src/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 tools/bin/%: tools/src/%.sh
-	install -Dm755 $< $@
+	mkdir -p $(@D)
+	install -m755 $< $@
 
 .DELETE_ON_ERROR:
 .PHONY: FORCE
