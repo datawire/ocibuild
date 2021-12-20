@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
@@ -16,17 +18,30 @@ import (
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 )
 
-var scriptTmpl = template.Must(template.
-	New("entry_point.py").
-	Parse(`#!{{ .Shebang }}
+var (
+	scriptTmpl = template.Must(template.
+			New("entry_point.py").
+			Parse(`#!{{ .Shebang }}
 # -*- coding: utf-8 -*-
 import re
 import sys
-from {{ .Module }} import {{ .ImportName }}
+from {{ .Module }} import {{ .Func }}
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
     sys.exit({{ .Func }}())
 `))
+
+	configParser = func() *python.ConfigParser {
+		configParser := python.NewConfigParser()
+		configParser.OptionTransform = func(str string) string { return str }
+		configParser.Delimiters = []string{"="}
+		return configParser
+	}()
+
+	// This is lax on validation of the [extras] part, but that's OK; we don't care about that
+	// part.
+	reFuncRef = regexp.MustCompile(`^(?P<callable>\w+([:.]\w+)*)(?:\s*\[.*\])?$`)
+)
 
 func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
@@ -41,7 +56,7 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 		if err != nil {
 			return err
 		}
-		configParser := &python.ConfigParser{}
+
 		configData, err := configParser.Parse(configReader)
 		if err != nil {
 			return err
@@ -58,12 +73,21 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 				continue
 			}
 			for k, v := range sectionData {
+				m := reFuncRef.FindStringSubmatch(v)
+				if m == nil {
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, k, v)
+				}
+				funcRef := m[reFuncRef.SubexpIndex("callable")]
+				parts := strings.Split(funcRef, ":")
+				if len(parts) != 2 {
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, k, v)
+				}
 				var buf bytes.Buffer
 				if err := scriptTmpl.Execute(&buf, map[string]string{
 					"Shebang":    shebang,
-					"Module":     "TODO" + v,
-					"ImportName": "TODO" + v,
-					"Func":       "TODO" + v,
+					"Module":     parts[0],
+					"ImportName": strings.SplitN(parts[1], ".", 2)[0],
+					"Func":       parts[1],
 				}); err != nil {
 					return fmt.Errorf("%s: %s: %w", sectionName, k, err)
 				}
