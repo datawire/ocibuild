@@ -3,7 +3,7 @@
 DESTDIR     ?=
 prefix      ?= /usr/local
 exec_prefix ?= $(prefix)
-bindir      ?= $(prefix)/bin
+bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
 datadir     ?= $(datarootdir)
 mandir      ?= $(datarootdir)/man
