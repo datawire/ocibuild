@@ -10,6 +10,8 @@ import (
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
+	"github.com/datawire/ocibuild/pkg/python/pypa/entry_points"
+	"github.com/datawire/ocibuild/pkg/python/pypa/recording_installs"
 )
 
 func init() {
@@ -64,7 +66,7 @@ func init() {
 				return err
 			}
 			var plat struct {
-				bdist.Platform
+				python.Platform
 				PyCompile []string
 			}
 			if err := yaml.Unmarshal(yamlBytes, &plat, yaml.DisallowUnknownFields); err != nil {
@@ -77,7 +79,14 @@ func init() {
 
 			ctx := flags.Context()
 
-			layer, err := bdist.InstallWheel(ctx, plat.Platform, args[0], nil)
+			layer, err := bdist.InstallWheel(ctx, plat.Platform, args[0], bdist.PostInstallHooks(
+				entry_points.CreateScripts(plat.Platform),
+				recording_installs.Record(
+					"sha256",
+					"ocibuild layer wheel",
+					nil, // direct_url
+				),
+			))
 			if err != nil {
 				return err
 			}

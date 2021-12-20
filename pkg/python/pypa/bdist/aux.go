@@ -57,56 +57,20 @@ func vercmp(a, b version) int {
 	return 0
 }
 
-type Platform struct {
-	ConsoleShebang   string // "/usr/bin/python3"
-	GraphicalShebang string // "/usr/bin/python3"
-
-	Scheme Scheme
-
-	UID   int
-	GID   int
-	UName string
-	GName string
-
-	PyCompile python.Compiler `json:"-"`
-}
-
-type Scheme struct {
-	// Installation directories: These are the directories described in
-	// distutils.command.install.SCHEME_KEYS and
-	// distutils.command.install.INSTALL_SCHEMES.
-	PureLib string `json:"purelib"` // "/usr/lib/python3.9/site-packages"
-	PlatLib string `json:"platlib"` // "/usr/lib64/python3.9/site-packages"
-	Headers string `json:"headers"` // "/usr/include/python3.9/$name/" (e.g. $name=cpython)
-	Scripts string `json:"scripts"` // "/usr/bin"
-	Data    string `json:"data"`    // "/usr"
-}
-
-func sanitizePlatformForLayer(plat Platform) (Platform, error) {
-	if plat.ConsoleShebang == "" && plat.GraphicalShebang == "" {
-		return plat, fmt.Errorf("Platform specification does not specify a path to use for shebangs")
+func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
+	if err := plat.Init(); err != nil {
+		return plat, err
 	}
-	if plat.ConsoleShebang == "" {
-		plat.ConsoleShebang = plat.GraphicalShebang
+	paths := []*string{
+		&plat.Scheme.PureLib,
+		&plat.Scheme.PlatLib,
+		&plat.Scheme.Headers,
+		&plat.Scheme.Scripts,
+		&plat.Scheme.Data,
 	}
-	if plat.GraphicalShebang == "" {
-		plat.GraphicalShebang = plat.ConsoleShebang
-	}
-	for _, pair := range []struct {
-		name string
-		ptr  *string
-	}{
-		{"purelib", &plat.Scheme.PureLib},
-		{"platlib", &plat.Scheme.PlatLib},
-		{"headers", &plat.Scheme.Headers},
-		{"scripts", &plat.Scheme.Scripts},
-		{"data", &plat.Scheme.Data},
-	} {
-		if !path.IsAbs(*pair.ptr) {
-			return plat, fmt.Errorf("Platform install scheme %q is not an absolute path: %q", pair.name, *pair.ptr)
-		}
-		clean := (*pair.ptr)[1:]
-		*pair.ptr = clean
+	for _, pathPtr := range paths {
+		clean := (*pathPtr)[1:]
+		*pathPtr = clean
 	}
 	return plat, nil
 }
@@ -153,6 +117,8 @@ func (wh *wheel) distInfoDir() (string, error) {
 	}
 }
 
+// vfs is a map[filename]FileReference where filename==FileReference.FullName() and filenames use
+// forward slashes and are absolute paths but without the leading "/" (same as io/fs).
 type PostInstallHook func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
 
 func PostInstallHooks(hooks ...PostInstallHook) PostInstallHook {

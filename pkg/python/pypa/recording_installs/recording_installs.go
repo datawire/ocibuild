@@ -49,7 +49,7 @@ var hashAlgorithms = map[string]func() hash.Hash{
 const defaultHashAlgorithm = "sha256"
 
 func recordFile(file fsutil.FileReference, hashName string, hasher hash.Hash, baseDir string) ([]string, error) {
-	fpName, err := filepath.Rel(filepath.FromSlash(baseDir), filepath.FromSlash(file.FullName()))
+	fpName, err := filepath.Rel(filepath.FromSlash("/"+baseDir), filepath.FromSlash("/"+file.FullName()))
 	if err != nil {
 		return nil, err
 	}

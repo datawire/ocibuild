@@ -20,11 +20,12 @@ import (
 	"github.com/datawire/ocibuild/pkg/python/pep376"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
+	"github.com/datawire/ocibuild/pkg/python/pypa/entry_points"
 	"github.com/datawire/ocibuild/pkg/python/pypa/recording_installs"
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
-func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme bdist.Scheme, err error) {
+func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme python.Scheme, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err
@@ -33,7 +34,7 @@ func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme bdist.Sc
 
 	// Step 1: Create the venv
 	if err := dexec.CommandContext(ctx, "python3", "-m", "venv", destDir).Run(); err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	schemeBytes, err := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "python3"), "-c", `
 import json
@@ -42,15 +43,15 @@ scheme=get_scheme("")
 print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 `).Output()
 	if err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	if err := json.Unmarshal(schemeBytes, &scheme); err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 
 	if err := os.Rename(destDir, destDir+".lower"); err != nil {
 		_ = os.RemoveAll(destDir)
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".lower"))
@@ -58,7 +59,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 	// Step 2: Create the workdir
 	if err := os.Mkdir(destDir+".work", 0777); err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(os.RemoveAll(destDir + ".work"))
@@ -66,11 +67,11 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 	// Step 3: Shuffle around "{destDir}" and "{destDir}.upper".
 	if err := os.Mkdir(destDir+".upper", 0777); err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	if err := os.Mkdir(destDir, 0777); err != nil {
 		_ = os.RemoveAll(destDir + ".upper")
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	if err := dexec.CommandContext(ctx,
 		"sudo", "mount",
@@ -85,7 +86,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	).Run(); err != nil {
 		maybeSetErr(os.RemoveAll(destDir + ".upper"))
 		maybeSetErr(os.RemoveAll(destDir))
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 	defer func() {
 		maybeSetErr(dexec.CommandContext(ctx, "sudo", "umount", destDir).Run())
@@ -96,7 +97,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	// Step 4: Actually run pip
 	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile).Run()
 	if err != nil {
-		return bdist.Scheme{}, err
+		return python.Scheme{}, err
 	}
 
 	return scheme, nil
@@ -132,7 +133,7 @@ func TestPIP(t *testing.T) {
 		require.NoError(t, err)
 		grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
 		require.NoError(t, err)
-		plat := bdist.Platform{
+		plat := python.Platform{
 			ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
 			GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
 			Scheme:           scheme,
@@ -146,6 +147,7 @@ func TestPIP(t *testing.T) {
 		// our own install
 		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename), bdist.PostInstallHooks(
 			pep376.RecordRequested(""),
+			entry_points.CreateScripts(plat),
 			recording_installs.Record(
 				"sha256",
 				"pip",

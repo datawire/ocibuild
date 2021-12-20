@@ -77,7 +77,7 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("%w in wheel zip archive: %q", fs.ErrNotExist, filename)
 }
 
-func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hook
 // =======
 //
 
-func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fsutil.FileReference, string, error) {
+func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform) (map[string]fsutil.FileReference, string, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -307,7 +307,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fs
 // ''''''''''''''''''''''''''''''
 //
 
-func rewritePython(plat Platform, vfs map[string]fsutil.FileReference, vfsTypes map[string]string) error {
+func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vfsTypes map[string]string) error {
 	// Rewrite ``#!python``.
 	//     In wheel, scripts are packaged in
 	//     ``{distribution}-{version}.data/scripts/``.  If the first line of
