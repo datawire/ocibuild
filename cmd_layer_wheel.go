@@ -53,7 +53,9 @@ func init() {
 			"\n" +
 			"LIMITATION: It is 'TODO' to create an 'ocibuild python WHATEVER' command " +
 			"that can inspect an image's Python installation and emit the appropriate " +
-			"YAML description of it.",
+			"YAML description of it.\n" +
+			"\n" +
+			"LIMITATION: While checksums are verified, signatures are not.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(flags *cobra.Command, args []string) error {
 
@@ -75,7 +77,7 @@ func init() {
 
 			ctx := flags.Context()
 
-			layer, err := bdist.InstallWheel(ctx, plat.Platform, args[0])
+			layer, err := bdist.InstallWheel(ctx, plat.Platform, args[0], nil)
 			if err != nil {
 				return err
 			}

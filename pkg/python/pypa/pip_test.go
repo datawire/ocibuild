@@ -1,4 +1,4 @@
-package bdist_test
+package pypa_test
 
 import (
 	"context"
@@ -141,7 +141,7 @@ func TestPIP(t *testing.T) {
 		}
 
 		// our own install
-		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename))
+		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename), nil)
 		require.NoError(t, err)
 
 		// compare them

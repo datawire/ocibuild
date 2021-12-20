@@ -120,6 +120,9 @@ func isExecutable(f *zip.File) bool { //nolint:deadcode,unused
 // This is based off of `pip/_internal/utils/wheel.py:wheel_dist_info_dir()`, since PEP 427 doesn't
 // actually have much to say about resolving ambiguity.
 func (wh *wheel) distInfoDir() (string, error) {
+	if wh.cachedDistInfoDir != "" {
+		return wh.cachedDistInfoDir, nil
+	}
 	infoDirs := make(map[string]struct{})
 	for _, file := range wh.zip.File {
 		dirname := strings.Split(path.Clean(file.FileHeader.Name), "/")[0]
@@ -134,6 +137,7 @@ func (wh *wheel) distInfoDir() (string, error) {
 		return "", fmt.Errorf(".dist-info directory not found")
 	case 1:
 		for infoDir := range infoDirs {
+			wh.cachedDistInfoDir = infoDir
 			return infoDir, nil
 		}
 		panic("not reached")

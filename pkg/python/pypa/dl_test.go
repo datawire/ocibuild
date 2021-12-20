@@ -1,4 +1,4 @@
-package bdist_test
+package pypa_test
 
 import (
 	"crypto/sha1"

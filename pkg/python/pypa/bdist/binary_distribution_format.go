@@ -12,15 +12,22 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/csv"
 	"fmt"
+	"hash"
 	"io"
 	"io/fs"
 	"net/textproto"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/datawire/dlib/derror"
 	"github.com/datawire/dlib/dlog"
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -56,6 +63,8 @@ import (
 // out onto their final paths at any later time.
 type wheel struct {
 	zip *zip.Reader
+
+	cachedDistInfoDir string
 }
 
 func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
@@ -65,7 +74,56 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 			return file.Open()
 		}
 	}
-	return nil, fmt.Errorf("file does not exist in wheel zip archive: %q", filename)
+	return nil, fmt.Errorf("%w in wheel zip archive: %q", fs.ErrNotExist, filename)
+}
+
+type PostInstallHook func(ctx context.Context, vfs map[string]fsutil.FileReference) error
+
+func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, hooks []PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+	plat, err := sanitizePlatformForLayer(plat)
+	if err != nil {
+		return nil, err
+	}
+
+	zipReader, err := zip.OpenReader(wheelfilename)
+	if err != nil {
+		return nil, err
+	}
+	defer zipReader.Close()
+
+	wh := &wheel{
+		zip: &zipReader.Reader,
+	}
+
+	if err := wh.integrityCheck(ctx); err != nil {
+		return nil, err
+	}
+
+	vfs, err := wh.installToVFS(ctx, plat)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hook := range hooks {
+		if err := hook(ctx, vfs); err != nil {
+			return nil, err
+		}
+	}
+
+	refs := make([]fsutil.FileReference, 0, len(vfs))
+	for _, file := range vfs {
+		ref, err := newTarSysEntry(file, func(header *tar.Header) {
+			header.Uid = plat.UID
+			header.Gid = plat.GID
+			header.Uname = plat.UName
+			header.Gname = plat.GName
+		})
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
+	}
+	return fsutil.LayerFromFileReferences(refs, opts...)
 }
 
 //
@@ -99,22 +157,7 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 // =======
 //
 
-func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
-	plat, err := sanitizePlatformForLayer(plat)
-	if err != nil {
-		return nil, err
-	}
-
-	zipReader, err := zip.OpenReader(wheelfilename)
-	if err != nil {
-		return nil, err
-	}
-	defer zipReader.Close()
-
-	wh := &wheel{
-		zip: &zipReader.Reader,
-	}
-
+func (wh *wheel) installToVFS(ctx context.Context, plat Platform) (map[string]fsutil.FileReference, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -237,6 +280,9 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts
 	}
 	//   d. Update ``distribution-1.0.dist-info/RECORD`` with the installed
 	//      paths.
+	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD"))
+	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD.jws"))
+	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD.p7s"))
 	//create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
 	//   e. Remove empty ``distribution-1.0.data`` directory.
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
@@ -255,20 +301,7 @@ func InstallWheel(ctx context.Context, plat Platform, wheelfilename string, opts
 		}
 	}
 
-	refs := make([]fsutil.FileReference, 0, len(vfs))
-	for _, file := range vfs {
-		ref, err := newTarSysEntry(file, func(header *tar.Header) {
-			header.Uid = plat.UID
-			header.Gid = plat.GID
-			header.Uname = plat.UName
-			header.Gname = plat.GName
-		})
-		if err != nil {
-			return nil, err
-		}
-		refs = append(refs, ref)
-	}
-	return fsutil.LayerFromFileReferences(refs, opts...)
+	return vfs, nil
 }
 
 //
@@ -611,6 +644,14 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 //    algorithm must be sha256 or better; specifically, md5 and sha1 are
 //    not permitted, as signed wheel files rely on the strong hashes in
 //    RECORD to validate the integrity of the archive.
+var strongHashes = map[string]func() hash.Hash{
+	// The spec is an open-ended list of hashes, so here's what PIP 20.3.4
+	// pip/_internal/utils/hashes.py includes:
+	"sha256": sha256.New,
+	"sha384": sha512.New384,
+	"sha512": sha512.New,
+}
+
 // #. PEP 376's INSTALLER and REQUESTED are not included in the archive.
 // #. RECORD.jws is used for digital signatures.  It is not mentioned in
 //    RECORD.
@@ -621,6 +662,7 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 //    against the file contents.  Apart from RECORD and its signatures,
 //    installation will fail if any file in the archive is not both
 //    mentioned and correctly hashed in RECORD.
+
 //
 //
 // The .data directory
@@ -683,6 +725,122 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 // - https://self-issued.info/docs/draft-jones-jose-json-private-key.html
 //
 //
+
+func (wh *wheel) integrityCheck(ctx context.Context) error {
+	distInfoDir, err := wh.distInfoDir()
+	if err != nil {
+		return err
+	}
+
+	todo := make(map[string]struct{})
+	for _, file := range wh.zip.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+		name := path.Clean(file.Name)
+		switch name {
+		case path.Join(distInfoDir, "RECORD.jws"):
+			// skip
+		case path.Join(distInfoDir, "RECORD.p7s"):
+			// skip
+		default:
+			todo[name] = struct{}{}
+		}
+	}
+
+	recordData, err := func() ([][]string, error) {
+		recordName := path.Join(distInfoDir, "RECORD")
+		reader, err := wh.Open(recordName)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			_ = reader.Close()
+		}()
+		data, err := csv.NewReader(reader).ReadAll()
+		if err != nil {
+			return nil, fmt.Errorf("read %q: %w", recordName, err)
+		}
+		return data, nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	checkFile := func(filename, algo string) (hash string, size int, err error) {
+		reader, err := wh.Open(filename)
+		if err != nil {
+			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+		}
+		defer func() {
+			_ = reader.Close()
+		}()
+		bs, err := io.ReadAll(reader)
+		if err != nil {
+			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+		}
+		size = len(bs)
+		if algo != "" {
+			newHasher, ok := strongHashes[algo]
+			if !ok {
+				return "", 0, fmt.Errorf("unsupported hash algorithm: %q", algo)
+			}
+			hasher := newHasher()
+			_, _ = hasher.Write(bs)
+			hash = algo + "=" + base64.RawURLEncoding.EncodeToString(hasher.Sum(nil))
+		}
+		return hash, size, err
+	}
+
+	var errs derror.MultiError
+	for i, row := range recordData {
+		if len(row) != 3 {
+			errs = append(errs, fmt.Errorf("RECORD row %d: does not have 3 columns: %q", i, row))
+			continue
+		}
+		name, hash, size := path.Clean(row[0]), row[1], row[2]
+		delete(todo, name)
+		if hash == "" || size == "" {
+			switch name {
+			case path.Join(distInfoDir, "RECORD"):
+				// skip
+			default:
+				errs = append(errs, fmt.Errorf("RECORD row %d: missing hash or size: %q", i, row))
+			}
+		}
+
+		algo := strings.SplitN(hash, "=", 2)[0]
+		actHash, actSize, err := checkFile(name, algo)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("RECORD row %d: %w", i, err))
+			continue
+		}
+		if hash != "" && actHash != hash {
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file hash %q does not match RECORD hash %q",
+				i, name, actHash, hash))
+		}
+		if size != "" && strconv.Itoa(actSize) != size {
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file size %d does not match RECORD size %s",
+				i, name, actSize, size))
+		}
+	}
+
+	if len(todo) > 0 {
+		todoNames := make([]string, 0, len(todo))
+		for name := range todo {
+			todoNames = append(todoNames, name)
+		}
+		sort.Strings(todoNames)
+		errs = append(errs, fmt.Errorf("files not mentioned in RECORD: %q", todoNames))
+	}
+
+	if len(errs) > 0 {
+		return errs
+	}
+
+	return nil
+}
+
 // Comparison to .egg
 // ------------------
 //

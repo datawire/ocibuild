@@ -3,7 +3,7 @@ module github.com/datawire/ocibuild
 go 1.17
 
 require (
-	github.com/datawire/dlib v1.2.4
+	github.com/datawire/dlib v1.2.5-0.20211118180738-bf0d3d767da0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-containerregistry v0.6.0
 	github.com/pmezard/go-difflib v1.0.0
