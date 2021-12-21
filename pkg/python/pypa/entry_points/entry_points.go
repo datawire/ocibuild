@@ -12,11 +12,11 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 var (
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 )
 
 func CreateScripts(plat python.Platform) bdist.PostInstallHook {
-	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
 		if err := plat.Init(); err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 					Name:     path.Join(plat.Scheme.Scripts[1:], k),
 					Mode:     0755,
 					Size:     int64(buf.Len()),
-					ModTime:  reproducible.Now(),
+					ModTime:  clampTime,
 				}
 				vfs[header.Name] = &fsutil.InMemFileReference{
 					FileInfo:  header.FileInfo(),

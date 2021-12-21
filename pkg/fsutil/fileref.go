@@ -6,11 +6,10 @@ import (
 	"io"
 	"io/fs"
 	"sort"
+	"time"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
-
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type FileReference interface {
@@ -19,7 +18,7 @@ type FileReference interface {
 	Open() (io.ReadCloser, error)
 }
 
-func LayerFromFileReferences(vfs []FileReference, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromFileReferences(vfs []FileReference, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	sort.Slice(vfs, func(i, j int) bool {
 		return vfs[i].FullName() < vfs[j].FullName()
 	})
@@ -33,14 +32,14 @@ func LayerFromFileReferences(vfs []FileReference, opts ...ociv1tarball.LayerOpti
 			return nil, err
 		}
 		header.Name = file.FullName()
-		if header.ModTime.After(reproducible.Now()) {
-			header.ModTime = reproducible.Now()
+		if header.ModTime.After(clampTime) {
+			header.ModTime = clampTime
 		}
-		if header.AccessTime.After(reproducible.Now()) {
-			header.AccessTime = reproducible.Now()
+		if header.AccessTime.After(clampTime) {
+			header.AccessTime = clampTime
 		}
-		if header.ChangeTime.After(reproducible.Now()) {
-			header.ChangeTime = reproducible.Now()
+		if header.ChangeTime.After(clampTime) {
+			header.ChangeTime = clampTime
 		}
 		if err := tarWriter.WriteHeader(header); err != nil {
 			return nil, err

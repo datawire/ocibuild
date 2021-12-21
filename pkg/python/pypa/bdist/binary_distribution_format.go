@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/datawire/dlib/derror"
 	"github.com/datawire/dlib/dlog"
@@ -78,7 +79,13 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("%w in wheel zip archive: %q", fs.ErrNotExist, filename)
 }
 
-func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+// InstallWheel produces an image layer from a Python wheel file.
+//
+// If minTime is non-zero, it is used as the timestamp when extracting files from the wheel file; if
+// it is zero then the timestamps in the wheel file are preserved.
+//
+// If maxTime is zero, then it defaults based on the maximum timestamp in the wheel file.
+func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime time.Time, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
 		return nil, err
@@ -98,13 +105,33 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		return nil, err
 	}
 
-	vfs, installedDistInfoDir, err := wh.installToVFS(ctx, plat)
+	if maxTime.IsZero() {
+		var maxWheelTime time.Time
+		for _, file := range wh.zip.File {
+			if file.Modified.After(maxWheelTime) {
+				maxWheelTime = file.Modified
+			}
+		}
+		if maxWheelTime.IsZero() {
+			maxTime = reproducible.Now()
+		} else {
+			maxWheelTimeRoundedUp := maxWheelTime.Round(time.Second)
+			if maxWheelTimeRoundedUp.Before(maxWheelTime) {
+				maxWheelTimeRoundedUp.Add(time.Second)
+			}
+			// Add 1 more second, so that .pyc files have an mtime after their source
+			// .py file.
+			maxTime = maxWheelTimeRoundedUp.Add(time.Second)
+		}
+	}
+
+	vfs, installedDistInfoDir, err := wh.installToVFS(ctx, plat, minTime, maxTime)
 	if err != nil {
 		return nil, err
 	}
 
 	if hook != nil {
-		if err := hook(ctx, vfs, installedDistInfoDir); err != nil {
+		if err := hook(ctx, maxTime, vfs, installedDistInfoDir); err != nil {
 			return nil, err
 		}
 	}
@@ -118,7 +145,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 						Typeflag: tar.TypeDir,
 						Name:     dir,
 						Mode:     0755,
-						ModTime:  reproducible.Now(),
+						ModTime:  maxTime,
 					}).FileInfo(),
 					MFullName: dir,
 				}
@@ -141,7 +168,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		refs = append(refs, ref)
 	}
 
-	return fsutil.LayerFromFileReferences(refs, opts...)
+	return fsutil.LayerFromFileReferences(refs, maxTime, opts...)
 }
 
 //
@@ -175,7 +202,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 // =======
 //
 
-func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform) (map[string]fsutil.FileReference, string, error) {
+func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime, maxTime time.Time) (map[string]fsutil.FileReference, string, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -211,7 +238,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform) (map[st
 	}
 	vfs := make(map[string]fsutil.FileReference)
 	for _, file := range wh.zip.File {
-		create(vfs, path.Join(dstDir, file.FileHeader.Name), &zipEntry{
+		create(vfs, minTime, path.Join(dstDir, file.FileHeader.Name), &zipEntry{
 			header: file.FileHeader,
 			open:   file.Open,
 		})
@@ -286,7 +313,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform) (map[st
 		if !strings.HasSuffix(file.Name(), ".py") {
 			continue
 		}
-		newFiles, err := plat.PyCompile(ctx, file)
+		newFiles, err := plat.PyCompile(ctx, maxTime, file)
 		if err != nil {
 			return nil, "", fmt.Errorf("py_compile: %w", err)
 		}

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type skipReader struct {
@@ -68,9 +67,12 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 	return nil
 }
 
-func create(vfs map[string]fsutil.FileReference, name string, content *zipEntry) {
+func create(vfs map[string]fsutil.FileReference, mtime time.Time, name string, content *zipEntry) {
 	content.header.Name = name
-	content.header.Modified = reproducible.Now() // this kills me, but it reflects what `pip` does
+	if !mtime.IsZero() {
+		// this kills me, but it reflects what `pip` does
+		content.header.Modified = mtime
+	}
 	vfs[name] = content
 }
 

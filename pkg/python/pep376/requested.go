@@ -8,14 +8,14 @@ import (
 	"archive/tar"
 	"context"
 	"path"
+	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 func RecordRequested(requested string) bdist.PostInstallHook {
-	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
 		// REQUESTED
 		// ---------
 		//
@@ -52,7 +52,7 @@ func RecordRequested(requested string) bdist.PostInstallHook {
 			Name:     fullname,
 			Mode:     0644,
 			Size:     int64(len(content)),
-			ModTime:  reproducible.Now(),
+			ModTime:  clampTime,
 		}
 		vfs[fullname] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),

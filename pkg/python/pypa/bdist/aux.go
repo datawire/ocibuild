@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
@@ -119,15 +120,15 @@ func (wh *wheel) distInfoDir() (string, error) {
 
 // vfs is a map[filename]FileReference where filename==FileReference.FullName() and filenames use
 // forward slashes and are absolute paths but without the leading "/" (same as io/fs).
-type PostInstallHook func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
+type PostInstallHook func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
 
 func PostInstallHooks(hooks ...PostInstallHook) PostInstallHook {
 	if len(hooks) == 0 {
 		return nil
 	}
-	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
 		for _, hook := range hooks {
-			if err := hook(ctx, vfs, installedDistInfoDir); err != nil {
+			if err := hook(ctx, clampTime, vfs, installedDistInfoDir); err != nil {
 				return err
 			}
 		}

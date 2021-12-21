@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -79,14 +80,20 @@ func init() {
 
 			ctx := flags.Context()
 
-			layer, err := bdist.InstallWheel(ctx, plat.Platform, args[0], bdist.PostInstallHooks(
-				entry_points.CreateScripts(plat.Platform),
-				recording_installs.Record(
-					"sha256",
-					"ocibuild layer wheel",
-					nil, // direct_url
+			layer, err := bdist.InstallWheel(ctx,
+				plat.Platform,
+				time.Time{}, // minTime: zero; don't enforce minTime
+				time.Time{}, // maxTime: zero; auto based on the timestamps in the wheel
+				args[0],     // filename
+				bdist.PostInstallHooks(
+					entry_points.CreateScripts(plat.Platform),
+					recording_installs.Record(
+						"sha256",
+						"ocibuild layer wheel",
+						nil, // direct_url
+					),
 				),
-			))
+			)
 			if err != nil {
 				return err
 			}

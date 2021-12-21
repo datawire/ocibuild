@@ -21,11 +21,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 // hashAlgorithms is specified to match `hashlib.algorithms_guaranteed`.  As of this writing, it is
@@ -75,7 +75,7 @@ func recordFile(file fsutil.FileReference, hashName string, hasher hash.Hash, ba
 }
 
 func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.PostInstallHook {
-	return func(ctx context.Context, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
 		// 1. The .dist-info directory
 
 		// Trust the wheel to have the correct .dist-info dir.
@@ -91,7 +91,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			Name:     path.Join(installedDistInfoDir, "INSTALLER"),
 			Mode:     0644,
 			Size:     int64(len(content)),
-			ModTime:  reproducible.Now(),
+			ModTime:  clampTime,
 		}
 		vfs[header.Name] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),
@@ -101,7 +101,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 
 		// 5. The direct_url.json file
 		if urlData != nil {
-			if err := direct_url.Record(*urlData)(ctx, vfs, installedDistInfoDir); err != nil {
+			if err := direct_url.Record(*urlData)(ctx, clampTime, vfs, installedDistInfoDir); err != nil {
 				return fmt.Errorf("recording-installed-packages: direct_url.json: %w", err)
 			}
 		}
@@ -147,7 +147,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			Name:     path.Join(installedDistInfoDir, "RECORD"),
 			Mode:     0644,
 			Size:     int64(recordBytes.Len()),
-			ModTime:  reproducible.Now(),
+			ModTime:  clampTime,
 		}
 		vfs[header.Name] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),

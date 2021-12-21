@@ -4,6 +4,7 @@ package gobuild
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/datawire/dlib/dexec"
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -12,7 +13,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/dir"
 )
 
-func LayerFromGo(ctx context.Context, pkgnames []string, opts ...ociv1tarball.LayerOption) (_ ociv1.Layer, err error) {
+func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, opts ...ociv1tarball.LayerOption) (_ ociv1.Layer, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err
@@ -47,5 +48,5 @@ func LayerFromGo(ctx context.Context, pkgnames []string, opts ...ociv1tarball.La
 		DirName: "usr/local/bin",
 		UName:   "root",
 		GName:   "root",
-	}, opts...)
+	}, clampTime, opts...)
 }

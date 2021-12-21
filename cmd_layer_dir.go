@@ -7,6 +7,7 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/dir"
 	"github.com/datawire/ocibuild/pkg/fsutil"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 func init() {
@@ -20,7 +21,7 @@ func init() {
 			if flagPrefix.DirName != "" {
 				prefix = &flagPrefix
 			}
-			layer, err := dir.LayerFromDir(args[0], prefix)
+			layer, err := dir.LayerFromDir(args[0], prefix, reproducible.Now())
 			if err != nil {
 				return err
 			}

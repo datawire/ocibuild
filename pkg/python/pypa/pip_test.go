@@ -96,8 +96,10 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	}()
 
 	// Step 4: Actually run pip
-	err = dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile).Run()
-	if err != nil {
+	cmd := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile)
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
+	if err := cmd.Run(); err != nil {
 		return python.Scheme{}, err
 	}
 
@@ -137,7 +139,7 @@ func TestPIP(t *testing.T) {
 			GID:     os.Getgid(),
 			UName:   usr.Username,
 			GName:   grp.Name,
-		})
+		}, reproducible.Now())
 		require.NoError(t, err)
 
 		// build platform data based on what pip did
@@ -155,18 +157,24 @@ func TestPIP(t *testing.T) {
 		}
 
 		// our own install
-		actLayer, err := bdist.InstallWheel(ctx, plat, filepath.Join(tmpdir, filename), bdist.PostInstallHooks(
-			pep376.RecordRequested(""),
-			entry_points.CreateScripts(plat),
-			recording_installs.Record(
-				"sha256",
-				"pip",
-				&direct_url.DirectURL{
-					URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
-					ArchiveInfo: &direct_url.ArchiveInfo{},
-				},
+		actLayer, err := bdist.InstallWheel(ctx,
+			plat,
+			reproducible.Now(), // minTime
+			reproducible.Now(), // maxTime
+			filepath.Join(tmpdir, filename),
+			bdist.PostInstallHooks(
+				pep376.RecordRequested(""),
+				entry_points.CreateScripts(plat),
+				recording_installs.Record(
+					"sha256",
+					"pip",
+					&direct_url.DirectURL{
+						URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+						ArchiveInfo: &direct_url.ArchiveInfo{},
+					},
+				),
 			),
-		))
+		)
 		require.NoError(t, err)
 
 		// compare them

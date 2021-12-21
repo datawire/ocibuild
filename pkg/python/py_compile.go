@@ -2,12 +2,14 @@ package python
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/datawire/dlib/dexec"
 
@@ -15,7 +17,7 @@ import (
 )
 
 // A Compiler is a function that takes an source .py file, and emits 1 or more compiled .pyc files.
-type Compiler func(context.Context, fsutil.FileReference) (map[string]fsutil.FileReference, error)
+type Compiler func(context.Context, time.Time, fsutil.FileReference) (map[string]fsutil.FileReference, error)
 
 // ExternalCompiler returns a `Compiler` that uses an external command to compile .py files to .pyc
 // files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag,
@@ -33,7 +35,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(ctx context.Context, in fsutil.FileReference) (compiled map[string]fsutil.FileReference, err error) {
+	return func(ctx context.Context, clampTime time.Time, in fsutil.FileReference) (compiled map[string]fsutil.FileReference, err error) {
 		maybeSetErr := func(_err error) {
 			if _err != nil && err == nil {
 				err = _err
@@ -78,6 +80,10 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			in.Name(), // file to compile
 		)...)
 		cmd.Dir = tmpdir
+		if !clampTime.IsZero() {
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("SOURCE_DATE_EPOCH=%d", clampTime.Unix()))
+		}
 		if err := cmd.Run(); err != nil {
 			return nil, err
 		}

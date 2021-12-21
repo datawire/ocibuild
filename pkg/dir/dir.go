@@ -9,11 +9,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
-
-	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type Prefix struct {
@@ -28,7 +27,7 @@ type Prefix struct {
 	GName string
 }
 
-func LayerFromDir(dirname string, prefix *Prefix, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	type logEntry struct {
 		Name string
 		Info fs.FileInfo
@@ -51,7 +50,7 @@ func LayerFromDir(dirname string, prefix *Prefix, opts ...ociv1tarball.LayerOpti
 			if err := tarWriter.WriteHeader(&tar.Header{
 				Name:     dirs[i],
 				Typeflag: tar.TypeDir,
-				ModTime:  reproducible.Now(),
+				ModTime:  clampTime,
 
 				Mode:  int64(prefix.Mode),
 				Uid:   prefix.UID,
@@ -104,14 +103,14 @@ func LayerFromDir(dirname string, prefix *Prefix, opts ...ociv1tarball.LayerOpti
 				return err
 			}
 		}
-		if header.ModTime.After(reproducible.Now()) {
-			header.ModTime = reproducible.Now()
+		if header.ModTime.After(clampTime) {
+			header.ModTime = clampTime
 		}
-		if header.AccessTime.After(reproducible.Now()) {
-			header.AccessTime = reproducible.Now()
+		if header.AccessTime.After(clampTime) {
+			header.AccessTime = clampTime
 		}
-		if header.ChangeTime.After(reproducible.Now()) {
-			header.ChangeTime = reproducible.Now()
+		if header.ChangeTime.After(clampTime) {
+			header.ChangeTime = clampTime
 		}
 		if err := tarWriter.WriteHeader(header); err != nil {
 			return err

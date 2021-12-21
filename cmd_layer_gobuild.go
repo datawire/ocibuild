@@ -7,6 +7,7 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/gobuild"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 func init() {
@@ -18,7 +19,7 @@ func init() {
 			"layer).  Use GOFLAGS to pass in extra flags.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(flags *cobra.Command, args []string) error {
-			layer, err := gobuild.LayerFromGo(flags.Context(), args)
+			layer, err := gobuild.LayerFromGo(flags.Context(), reproducible.Now(), args)
 			if err != nil {
 				return err
 			}
