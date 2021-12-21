@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type skipReader struct {
@@ -69,6 +70,7 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 
 func create(vfs map[string]fsutil.FileReference, name string, content *zipEntry) {
 	content.header.Name = name
+	content.header.Modified = reproducible.Now() // this kills me, but it reflects what `pip` does
 	vfs[name] = content
 }
 

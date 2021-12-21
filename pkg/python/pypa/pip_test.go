@@ -110,7 +110,7 @@ func TestPIP(t *testing.T) {
 		t.SkipNow()
 	}
 
-	_ = reproducible.Now()
+	t.Logf("reproducible.Now() => %v", reproducible.Now())
 
 	usr, err := user.Current()
 	require.NoError(t, err)

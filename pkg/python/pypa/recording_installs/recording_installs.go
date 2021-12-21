@@ -117,13 +117,13 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		}
 		hasher := newHasher()
 		csvData := [][]string{
-			{path.Join(installedDistInfoDir, "RECORD"), "", ""},
+			{path.Join(path.Base(installedDistInfoDir), "RECORD"), "", ""},
 		}
 		for _, file := range vfs {
 			if file.IsDir() {
 				continue
 			}
-			row, err := recordFile(file, hashName, hasher, installedDistInfoDir)
+			row, err := recordFile(file, hashName, hasher, path.Dir(installedDistInfoDir))
 			if err != nil {
 				return fmt.Errorf("recording installed-packaged: recording file %q: %w", file.FullName(), err)
 			}
@@ -134,6 +134,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		})
 		var recordBytes bytes.Buffer
 		csvWriter := csv.NewWriter(&recordBytes)
+		csvWriter.UseCRLF = true
 		if err := csvWriter.WriteAll(csvData); err != nil {
 			return err
 		}
