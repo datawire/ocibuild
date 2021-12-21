@@ -11,6 +11,14 @@ import (
 
 func TestStatModeString(t *testing.T) {
 	fn := func(m python.StatMode) bool {
+		if m&python.ModeFmt == python.ModeFmtWhiteout {
+			// S_IFWHT isn't defined on all platforms (it is on macOS, but not on
+			// Linux), and so whether Python's _stat.c:filetype() will return 'w' or '?'
+			// for it varies by platform.  But we don't want the Go code's behavior to
+			// vary by platform, so just skip ModeFmtWhiteout tests.
+			return true
+		}
+
 		act := m.String()
 		exp, _ := exec.Command("python3", "-c",
 			fmt.Sprintf(`import stat; print(stat.filemode(%d), end="")`, m)).

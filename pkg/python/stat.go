@@ -13,18 +13,28 @@ import (
 // Plan 9, and Python's bits match those of the Linux kernel.
 type StatMode uint16
 
+//nolint:deadcode,varcheck
 const (
 	// 16 bits = 5⅓ octal characters
 
 	ModeFmt StatMode = 017_0000 // mask for the type bits
 
+	_ModeFmtUnused000  StatMode = 000_0000
 	ModeFmtNamedPipe   StatMode = 001_0000 // type: named pipe (FIFO)
 	ModeFmtCharDevice  StatMode = 002_0000 // type: character device
+	_ModeFmtUnused003  StatMode = 003_0000
 	ModeFmtDir         StatMode = 004_0000 // type: directory
+	_ModeFmtUnused005  StatMode = 005_0000
 	ModeFmtBlockDevice StatMode = 006_0000 // type: block device
+	_ModeFmtUnused007  StatMode = 007_0000
 	ModeFmtRegular     StatMode = 010_0000 // type: regular file
+	_ModeFmtUnused011  StatMode = 011_0000
 	ModeFmtSymlink     StatMode = 012_0000 // type: symbolic link
+	_ModeFmtUnused013  StatMode = 013_0000
 	ModeFmtSocket      StatMode = 014_0000 // type: socket file
+	_ModeFmtUnused015  StatMode = 015_0000
+	ModeFmtWhiteout    StatMode = 016_0000 // type: whiteout (non-Linux)
+	_ModeFmtUnused017  StatMode = 017_0000
 
 	ModePerm StatMode = 000_7777 // mask for permission bits
 
@@ -136,13 +146,16 @@ func (pm StatMode) IsRegular() bool {
 // String returns a textual representation of the mode.
 //
 // This is the format that POSIX specifies for showing the mode in the output of the `ls -l`
-// command.  POSIX does not specify the character to use to indicate a ModeFmtFocket file; this
+// command.  POSIX does not specify the character to use to indicate a ModeFmtSocket file; this
 // method uses 's' (both Python `stat.filemode()` behavior and GNU `ls` behavior; though POSIX notes
-// that many implementations use '=' for sockets).
+// that many implementations use '=' for sockets).  POSIX does not specify the character to use to
+// indicate a ModeFmtWhiteout file; the method uses 'w' (the behavior of Pyton `stat.filemode()`).
 func (pm StatMode) String() string {
 	buf := [10]byte{
-		// type
-		"?pc?d?b?-?l?s???"[pm>>12],
+		// type: This string is easy; it directly pairs with the above ModeFmtXXX list
+		// above; the character in the string left-to-right corresponds with the constant in
+		// the list top-to-bottom.
+		"?pc?d?b?-?l?s?w?"[pm>>12],
 
 		// owner
 		"-r"[(pm>>8)&01],
