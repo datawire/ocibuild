@@ -16,6 +16,8 @@ import (
 func init() {
 	var argBase string
 	var argTag string
+	var argEntrypoint string
+
 	cmd := &cobra.Command{
 		Use:   "build [flags] IN_LAYERFILES... >OUT_IMAGEFILE",
 		Short: "Combine layers in to a complete image",
@@ -51,6 +53,18 @@ func init() {
 			if err != nil {
 				return err
 			}
+
+			if argEntrypoint != "" {
+				config, _ := img.ConfigFile()
+				config.Config.Entrypoint = []string{argEntrypoint}
+
+				img, err = mutate.Config(img, config.Config)
+
+				if err != nil {
+					return err
+				}
+			}
+
 			if err := ociv1tarball.Write(tag, img, os.Stdout); err != nil {
 				return err
 			}
@@ -59,6 +73,7 @@ func init() {
 	}
 	cmd.Flags().StringVar(&argBase, "base", "", "Use `IN_IMAGEFILE` as the base of the image")
 	cmd.Flags().StringVarP(&argTag, "tag", "t", "", "Tag the resulting image as `TAG`")
+	cmd.Flags().StringVar(&argEntrypoint, "entrypoint", "", "Set the resulting image's `ENTRYPOINT`")
 
 	argparserImage.AddCommand(cmd)
 }
