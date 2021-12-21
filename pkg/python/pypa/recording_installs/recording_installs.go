@@ -25,6 +25,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 // hashAlgorithms is specified to match `hashlib.algorithms_guaranteed`.  As of this writing, it is
@@ -90,6 +91,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			Name:     path.Join(installedDistInfoDir, "INSTALLER"),
 			Mode:     0644,
 			Size:     int64(len(content)),
+			ModTime:  reproducible.Now(),
 		}
 		vfs[header.Name] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),
@@ -144,6 +146,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			Name:     path.Join(installedDistInfoDir, "RECORD"),
 			Mode:     0644,
 			Size:     int64(recordBytes.Len()),
+			ModTime:  reproducible.Now(),
 		}
 		vfs[header.Name] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),

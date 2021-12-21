@@ -11,6 +11,7 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 func RecordRequested(requested string) bdist.PostInstallHook {
@@ -51,6 +52,7 @@ func RecordRequested(requested string) bdist.PostInstallHook {
 			Name:     fullname,
 			Mode:     0644,
 			Size:     int64(len(content)),
+			ModTime:  reproducible.Now(),
 		}
 		vfs[fullname] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),

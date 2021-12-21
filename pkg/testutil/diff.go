@@ -27,7 +27,6 @@ func DumpLayerFull(layer ociv1.Layer) (str string, err error) {
 
 	var spewConfig = spew.ConfigState{
 		Indent:                  "  ",
-		DisableMethods:          true,
 		DisableCapacities:       true,
 		DisablePointerAddresses: true,
 		SortKeys:                true,
@@ -186,7 +185,24 @@ func AssertEqualLayers(t *testing.T, exp, act ociv1.Layer) bool {
 			Context:  1,
 		})
 		t.Errorf("Listing diff:\n%s", diff)
-		return false
+		keepGoing := false
+		if lines := strings.Split(diff, "\n"); len(lines) > 3 {
+			var del, add int
+			for _, line := range lines[3:] {
+				switch {
+				case strings.HasPrefix(line, "-"):
+					del++
+				case strings.HasPrefix(line, "+"):
+					add++
+				}
+			}
+			if del == 1 && add == 1 {
+				keepGoing = true
+			}
+		}
+		if !keepGoing {
+			return false
+		}
 	}
 
 	// OK, that passed, now dow a comre comprehensive diff.
@@ -208,7 +224,7 @@ func AssertEqualLayers(t *testing.T, exp, act ociv1.Layer) bool {
 			FromDate: "",
 			ToFile:   "Actual",
 			ToDate:   "",
-			Context:  1,
+			Context:  10,
 		})
 		t.Errorf("Full diff:\n%s", diff)
 		return false

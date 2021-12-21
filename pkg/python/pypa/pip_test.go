@@ -22,6 +22,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
 	"github.com/datawire/ocibuild/pkg/python/pypa/entry_points"
 	"github.com/datawire/ocibuild/pkg/python/pypa/recording_installs"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
@@ -108,6 +109,8 @@ func TestPIP(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.SkipNow()
 	}
+
+	_ = reproducible.Now()
 
 	usr, err := user.Current()
 	require.NoError(t, err)

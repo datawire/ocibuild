@@ -9,6 +9,8 @@ import (
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
+
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type FileReference interface {
@@ -33,6 +35,15 @@ func LayerFromFileReferences(vfs []FileReference, opts ...ociv1tarball.LayerOpti
 		header.Name = file.FullName()
 		if err := tarWriter.WriteHeader(header); err != nil {
 			return nil, err
+		}
+		if header.ModTime.After(reproducible.Now()) {
+			header.ModTime = reproducible.Now()
+		}
+		if header.AccessTime.After(reproducible.Now()) {
+			header.AccessTime = reproducible.Now()
+		}
+		if header.ChangeTime.After(reproducible.Now()) {
+			header.ChangeTime = reproducible.Now()
 		}
 		if header.Typeflag == tar.TypeReg {
 			fh, err := file.Open()

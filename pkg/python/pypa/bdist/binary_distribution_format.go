@@ -36,6 +36,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pep425"
 	"github.com/datawire/ocibuild/pkg/python/pep440"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 //
@@ -108,6 +109,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		}
 	}
 
+	// ensure that parent directories exist
 	for filename := range vfs {
 		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
 			if _, exists := vfs[dir]; !exists {
@@ -116,6 +118,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 						Typeflag: tar.TypeDir,
 						Name:     dir,
 						Mode:     0755,
+						ModTime:  reproducible.Now(),
 					}).FileInfo(),
 					MFullName: dir,
 				}
@@ -123,6 +126,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		}
 	}
 
+	// chown
 	refs := make([]fsutil.FileReference, 0, len(vfs))
 	for _, file := range vfs {
 		ref, err := newTarSysEntry(file, func(header *tar.Header) {
@@ -136,6 +140,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		}
 		refs = append(refs, ref)
 	}
+
 	return fsutil.LayerFromFileReferences(refs, opts...)
 }
 

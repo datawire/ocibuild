@@ -11,6 +11,7 @@ import (
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
+	"github.com/datawire/ocibuild/pkg/reproducible"
 )
 
 type DirectURL struct {
@@ -40,16 +41,16 @@ func Record(urlData DirectURL) bdist.PostInstallHook {
 		if err != nil {
 			return err
 		}
-		fullname := path.Join(installedDistInfoDir, "direct_url.json")
 		header := &tar.Header{
 			Typeflag: tar.TypeReg,
-			Name:     fullname,
+			Name:     path.Join(installedDistInfoDir, "direct_url.json"),
 			Mode:     0644,
 			Size:     int64(len(bs)),
+			ModTime:  reproducible.Now(),
 		}
-		vfs[fullname] = &fsutil.InMemFileReference{
+		vfs[header.Name] = &fsutil.InMemFileReference{
 			FileInfo:  header.FileInfo(),
-			MFullName: fullname,
+			MFullName: header.Name,
 			MContent:  bs,
 		}
 		return nil
