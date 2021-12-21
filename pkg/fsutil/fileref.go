@@ -33,9 +33,6 @@ func LayerFromFileReferences(vfs []FileReference, opts ...ociv1tarball.LayerOpti
 			return nil, err
 		}
 		header.Name = file.FullName()
-		if err := tarWriter.WriteHeader(header); err != nil {
-			return nil, err
-		}
 		if header.ModTime.After(reproducible.Now()) {
 			header.ModTime = reproducible.Now()
 		}
@@ -44,6 +41,9 @@ func LayerFromFileReferences(vfs []FileReference, opts ...ociv1tarball.LayerOpti
 		}
 		if header.ChangeTime.After(reproducible.Now()) {
 			header.ChangeTime = reproducible.Now()
+		}
+		if err := tarWriter.WriteHeader(header); err != nil {
+			return nil, err
 		}
 		if header.Typeflag == tar.TypeReg {
 			fh, err := file.Open()
