@@ -82,6 +82,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 		cmd.Dir = tmpdir
 		if !clampTime.IsZero() {
 			cmd.Env = append(os.Environ(),
+				"PYTHONHASHSEED=0",
 				fmt.Sprintf("SOURCE_DATE_EPOCH=%d", clampTime.Unix()))
 		}
 		if err := cmd.Run(); err != nil {

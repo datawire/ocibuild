@@ -98,6 +98,7 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 	// Step 4: Actually run pip
 	cmd := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile)
 	cmd.Env = append(os.Environ(),
+		"PYTHONHASHSEED=0",
 		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
 	if err := cmd.Run(); err != nil {
 		return python.Scheme{}, err
