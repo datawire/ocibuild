@@ -1,18 +1,19 @@
 package pypa_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/datawire/dlib/dexec"
 	"github.com/datawire/dlib/dlog"
+	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/datawire/ocibuild/pkg/dir"
@@ -26,136 +27,127 @@ import (
 	"github.com/datawire/ocibuild/pkg/testutil"
 )
 
-func pipInstall(ctx context.Context, wheelFile, destDir string) (scheme python.Scheme, err error) {
-	maybeSetErr := func(_err error) {
-		if _err != nil && err == nil {
-			err = _err
-		}
+func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, error) {
+	if err := os.MkdirAll(destDir, 0777); err != nil {
+		return nil, err
 	}
 
-	// Step 1: Create the venv
-	if err := dexec.CommandContext(ctx, "python3", "-m", "venv", destDir).Run(); err != nil {
-		return python.Scheme{}, err
-	}
-	schemeBytes, err := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "python3"), "-c", `
-import json
-from pip._internal.locations import get_scheme;
-scheme=get_scheme("")
-print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
-`).Output()
+	usr, err := user.Current()
 	if err != nil {
-		return python.Scheme{}, err
+		return nil, err
 	}
-	if err := json.Unmarshal(schemeBytes, &scheme); err != nil {
-		return python.Scheme{}, err
+	grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
+	if err != nil {
+		return nil, err
 	}
 
-	if err := os.Rename(destDir, destDir+".lower"); err != nil {
-		_ = os.RemoveAll(destDir)
-		return python.Scheme{}, err
-	}
-	defer func() {
-		maybeSetErr(os.RemoveAll(destDir + ".lower"))
-	}()
-
-	// Step 2: Create the workdir
-	if err := os.Mkdir(destDir+".work", 0777); err != nil {
-		return python.Scheme{}, err
-	}
-	defer func() {
-		maybeSetErr(os.RemoveAll(destDir + ".work"))
-	}()
-
-	// Step 3: Shuffle around "{destDir}" and "{destDir}.upper".
-	if err := os.Mkdir(destDir+".upper", 0777); err != nil {
-		return python.Scheme{}, err
-	}
-	if err := os.Mkdir(destDir, 0777); err != nil {
-		_ = os.RemoveAll(destDir + ".upper")
-		return python.Scheme{}, err
-	}
-	if err := dexec.CommandContext(ctx,
-		"sudo", "mount",
-		"-t", "overlay", // filesystem type
-		"-o", strings.Join([]string{ // filesystem options
-			"lowerdir=" + (destDir + ".lower"),
-			"upperdir=" + (destDir + ".upper"),
-			"workdir=" + (destDir + ".work"),
-		}, ","),
-		"overlay:"+filepath.Base(wheelFile), // device; for the 'overlay' FS type, this is just a vanity name
-		destDir,                             // mountpoint
-	).Run(); err != nil {
-		maybeSetErr(os.RemoveAll(destDir + ".upper"))
-		maybeSetErr(os.RemoveAll(destDir))
-		return python.Scheme{}, err
-	}
-	defer func() {
-		maybeSetErr(dexec.CommandContext(ctx, "sudo", "umount", destDir).Run())
-		maybeSetErr(os.Remove(destDir))
-		maybeSetErr(os.Rename(destDir+".upper", destDir))
-	}()
-
-	// Step 4: Actually run pip
-	cmd := dexec.CommandContext(ctx, filepath.Join(destDir, "bin", "pip"), "install", "--no-deps", wheelFile)
+	cmd := dexec.CommandContext(ctx, "pip3", "install", "--no-deps", "--prefix="+destDir, wheelFile)
 	cmd.Env = append(os.Environ(),
 		"PYTHONHASHSEED=0",
 		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
 	if err := cmd.Run(); err != nil {
-		return python.Scheme{}, err
+		return nil, err
 	}
 
-	return scheme, nil
-}
-
-// Test against the Package Installer for Python.
-func TestPIP(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.SkipNow()
+	layerPrefix, err := filepath.Rel("/", destDir)
+	if err != nil {
+		return nil, err
 	}
-
-	t.Logf("reproducible.Now() => %v", reproducible.Now())
-
-	usr, err := user.Current()
-	require.NoError(t, err)
-	grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
-	require.NoError(t, err)
-
-	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
-		ctx := dlog.NewTestContext(t, true)
-		tmpdir := t.TempDir()
-
-		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
-
-		// pip reference install
-		scheme, err := pipInstall(ctx,
-			filepath.Join(tmpdir, filename), // wheelfile
-			filepath.Join(tmpdir, "dst"))    // dest dir
-		require.NoError(t, err)
-		prefix, err := filepath.Rel("/", filepath.Join(tmpdir, "dst"))
-		require.NoError(t, err)
-		prefix = filepath.ToSlash(prefix)
-		expLayer, err := dir.LayerFromDir(filepath.Join(tmpdir, "dst"), &dir.Prefix{
-			DirName: prefix,
+	layerPrefix = filepath.ToSlash(layerPrefix)
+	return dir.LayerFromDir(
+		destDir,
+		&dir.Prefix{
+			DirName: layerPrefix,
 			UID:     os.Getuid(),
 			GID:     os.Getgid(),
 			UName:   usr.Username,
 			GName:   grp.Name,
-		}, reproducible.Now())
+		},
+		reproducible.Now(),
+	)
+}
+
+// Return a python.Platform that mimics the behavior of `pip3 install --prefix=${destDir}`.
+func pipPlatform(ctx context.Context, destDir string) (python.Platform, error) {
+
+	// 1. Look up user info.
+	usr, err := user.Current()
+	if err != nil {
+		return python.Platform{}, err
+	}
+	grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
+	if err != nil {
+		return python.Platform{}, err
+	}
+
+	// 2. Look up the scheme.
+	schemeBytes, err := dexec.CommandContext(ctx, "python3", "-c", `
+import sys
+import json
+from pip._internal.locations import get_scheme;
+scheme=get_scheme("", prefix=sys.argv[1])
+print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
+`, destDir).Output()
+	if err != nil {
+		return python.Platform{}, err
+	}
+	var scheme python.Scheme
+	if err := json.Unmarshal(schemeBytes, &scheme); err != nil {
+		return python.Platform{}, err
+	}
+
+	// 3. Look up pip3's shebang.
+	pip3path, err := dexec.LookPath("pip3")
+	if err != nil {
+		return python.Platform{}, err
+	}
+	pip3bytes, err := os.ReadFile(pip3path)
+	if err != nil {
+		return python.Platform{}, err
+	}
+	pip3shebang := strings.TrimSpace(strings.TrimPrefix(string(bytes.SplitN(pip3bytes, []byte("\n"), 2)[0]), "#!"))
+
+	// 4. Assemble the compiler.
+	compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
+	if err != nil {
+		return python.Platform{}, err
+	}
+
+	// 5. Put it all together.
+	return python.Platform{
+		ConsoleShebang:   pip3shebang,
+		GraphicalShebang: pip3shebang,
+		Scheme:           scheme,
+		UID:              os.Getuid(),
+		GID:              os.Getgid(),
+		UName:            usr.Username,
+		GName:            grp.Name,
+		PyCompile:        compiler,
+	}, nil
+}
+
+// Test against the Package Installer for Python.
+func TestPIP(t *testing.T) {
+	t.Logf("reproducible.Now() => %v", reproducible.Now())
+
+	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
+		ctx := dlog.NewTestContext(t, true)
+		//tmpdir := t.TempDir()
+		tmpdir := "/tmp/x"
+		os.RemoveAll(tmpdir)
+		os.Mkdir(tmpdir, 0755)
+
+		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
+
+		// pip reference install
+		expLayer, err := pipInstall(ctx,
+			filepath.Join(tmpdir, "dst"),    // dest dir
+			filepath.Join(tmpdir, filename)) // wheelfile
 		require.NoError(t, err)
 
-		// build platform data based on what pip did
-		compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
+		// build platform data to mimic what pip did
+		plat, err := pipPlatform(ctx, filepath.Join(tmpdir, "dst"))
 		require.NoError(t, err)
-		plat := python.Platform{
-			ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
-			GraphicalShebang: filepath.Join(scheme.Scripts, "python3"),
-			Scheme:           scheme,
-			UID:              os.Getuid(),
-			GID:              os.Getgid(),
-			UName:            usr.Username,
-			GName:            grp.Name,
-			PyCompile:        compiler,
-		}
 
 		// our own install
 		actLayer, err := bdist.InstallWheel(ctx,
