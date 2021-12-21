@@ -14,7 +14,19 @@ import (
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func LayerFromDir(dirname string, addPrefix string, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+type Prefix struct {
+	DirName string
+
+	Mode int
+
+	UID   int
+	UName string
+
+	GID   int
+	GName string
+}
+
+func LayerFromDir(dirname string, prefix *Prefix, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	type logEntry struct {
 		Name string
 		Info fs.FileInfo
@@ -24,6 +36,30 @@ func LayerFromDir(dirname string, addPrefix string, opts ...ociv1tarball.LayerOp
 	tarWriter := tar.NewWriter(&byteWriter)
 
 	var log []logEntry
+
+	if prefix != nil {
+		if prefix.Mode == 0 {
+			prefix.Mode = 0755
+		}
+		var dirs []string
+		for dir := prefix.DirName; dir != "."; dir = path.Dir(dir) {
+			dirs = append(dirs, dir)
+		}
+		for i := len(dirs) - 1; i >= 0; i-- {
+			if err := tarWriter.WriteHeader(&tar.Header{
+				Name: dirs[i],
+
+				Typeflag: tar.TypeDir,
+				Mode:     int64(prefix.Mode),
+				Uid:      prefix.UID,
+				Uname:    prefix.UName,
+				Gid:      prefix.GID,
+				Gname:    prefix.GName,
+			}); err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	err := filepath.Walk(dirname, func(p string, info fs.FileInfo, e error) error {
 		if e != nil {
@@ -37,8 +73,8 @@ func LayerFromDir(dirname string, addPrefix string, opts ...ociv1tarball.LayerOp
 		if name == "." {
 			return nil
 		}
-		if addPrefix != "" {
-			name = path.Join(addPrefix, name)
+		if prefix != nil {
+			name = path.Join(prefix.DirName, name)
 		}
 		defer func() {
 			log = append(log, logEntry{

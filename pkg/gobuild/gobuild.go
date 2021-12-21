@@ -43,5 +43,9 @@ func LayerFromGo(ctx context.Context, pkgnames []string, opts ...ociv1tarball.La
 		return nil, err
 	}
 
-	return dir.LayerFromDir(tmpdir, "usr/local/bin", opts...)
+	return dir.LayerFromDir(tmpdir, &dir.Prefix{
+		DirName: "usr/local/bin",
+		UName:   "root",
+		GName:   "root",
+	}, opts...)
 }

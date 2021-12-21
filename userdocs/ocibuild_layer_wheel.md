@@ -37,6 +37,8 @@ In order to transform the wheel in to a layer, ocibuild needs to know a few thin
 
 LIMITATION: It is 'TODO' to create an 'ocibuild python WHATEVER' command that can inspect an image's Python installation and emit the appropriate YAML description of it.
 
+LIMITATION: While checksums are verified, signatures are not.
+
 ```
 ocibuild layer wheel [flags] IN_WHEELFILE.whl >OUT_LAYERFILE
 ```

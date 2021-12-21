@@ -108,6 +108,21 @@ func InstallWheel(ctx context.Context, plat python.Platform, wheelfilename strin
 		}
 	}
 
+	for filename := range vfs {
+		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
+			if _, exists := vfs[dir]; !exists {
+				vfs[dir] = &fsutil.InMemFileReference{
+					FileInfo: (&tar.Header{
+						Typeflag: tar.TypeDir,
+						Name:     dir,
+						Mode:     0755,
+					}).FileInfo(),
+					MFullName: dir,
+				}
+			}
+		}
+	}
+
 	refs := make([]fsutil.FileReference, 0, len(vfs))
 	for _, file := range vfs {
 		ref, err := newTarSysEntry(file, func(header *tar.Header) {
@@ -190,37 +205,13 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform) (map[st
 		dstDir = plat.Scheme.PlatLib
 	}
 	vfs := make(map[string]fsutil.FileReference)
-	// Use fs.WalkDir instead of iterating over wh.zip.File so that it will figure out
-	// synthesizing missing directories for us.
-	if err := fs.WalkDir(wh.zip, ".", func(fullname string, dirent fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		fileinfo, err := dirent.Info()
-		if err != nil {
-			return err
-		}
-		header, err := zip.FileInfoHeader(fileinfo)
-		if err != nil {
-			return err
-		}
-		if fileinfo.IsDir() && fileinfo.ModTime().IsZero() {
-			// synthetic directory; these are always chmod 0555, but we want them to be
-			// chmod 0755.
-			externalAttrs := python.ParseZIPExternalAttributes(header.ExternalAttrs)
-			externalAttrs.UNIX |= 0755
-			header.ExternalAttrs = externalAttrs.Raw()
-		}
-		create(vfs, path.Join(dstDir, fullname), &zipEntry{
-			header: *header,
-			open: func() (io.ReadCloser, error) {
-				return wh.zip.Open(fullname)
-			},
+	for _, file := range wh.zip.File {
+		create(vfs, path.Join(dstDir, file.FileHeader.Name), &zipEntry{
+			header: file.FileHeader,
+			open:   file.Open,
 		})
-		return nil
-	}); err != nil {
-		return nil, "", err
 	}
+
 	//
 	// - Spread.
 	//

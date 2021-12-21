@@ -109,6 +109,11 @@ func TestPIP(t *testing.T) {
 		t.SkipNow()
 	}
 
+	usr, err := user.Current()
+	require.NoError(t, err)
+	grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
+	require.NoError(t, err)
+
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
 		ctx := dlog.NewTestContext(t, true)
 		tmpdir := t.TempDir()
@@ -123,15 +128,17 @@ func TestPIP(t *testing.T) {
 		prefix, err := filepath.Rel("/", filepath.Join(tmpdir, "dst"))
 		require.NoError(t, err)
 		prefix = filepath.ToSlash(prefix)
-		expLayer, err := dir.LayerFromDir(filepath.Join(tmpdir, "dst"), prefix)
+		expLayer, err := dir.LayerFromDir(filepath.Join(tmpdir, "dst"), &dir.Prefix{
+			DirName: prefix,
+			UID:     os.Getuid(),
+			GID:     os.Getgid(),
+			UName:   usr.Username,
+			GName:   grp.Name,
+		})
 		require.NoError(t, err)
 
 		// build platform data based on what pip did
 		compiler, err := python.ExternalCompiler("python3", "-m", "compileall")
-		require.NoError(t, err)
-		usr, err := user.Current()
-		require.NoError(t, err)
-		grp, err := user.LookupGroupId(fmt.Sprintf("%v", os.Getgid()))
 		require.NoError(t, err)
 		plat := python.Platform{
 			ConsoleShebang:   filepath.Join(scheme.Scripts, "python3"),
