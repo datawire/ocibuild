@@ -63,7 +63,8 @@ $(DESTDIR)$(zsh_completion_dir)/_$(name): completion.zsh
 	install -m644 $< $@
 
 install-man: man
-	install -Dm644 -t $(DESTDIR)$(man1dir) man/*.1
+	mkdir -p $(@D)
+	install -m644 -t $(DESTDIR)$(man1dir) man/*.1
 .PHONY: install-man
 
 # Check
