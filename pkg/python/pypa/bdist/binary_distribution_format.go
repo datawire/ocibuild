@@ -156,7 +156,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 	// chown
 	refs := make([]fsutil.FileReference, 0, len(vfs))
 	for _, file := range vfs {
-		ref, err := newTarSysEntry(file, func(header *tar.Header) {
+		ref, err := newTarEntry(file, func(header *tar.Header) {
 			header.Uid = plat.UID
 			header.Gid = plat.GID
 			header.Uname = plat.UName

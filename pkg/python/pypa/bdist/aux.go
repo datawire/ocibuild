@@ -77,8 +77,8 @@ func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
 }
 
 // This is based off of pip/_internal/utils/unpacking.py:zip_item_is_executable()`
-func isExecutable(f *zip.File) bool { //nolint:deadcode,unused
-	externalAttrs := python.ParseZIPExternalAttributes(f.FileHeader.ExternalAttrs)
+func isExecutable(fh zip.FileHeader) bool {
+	externalAttrs := python.ParseZIPExternalAttributes(fh.ExternalAttrs)
 	return externalAttrs.UNIX.IsRegular() && (externalAttrs.UNIX&0111 != 0)
 }
 

@@ -7,9 +7,11 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
+	"github.com/datawire/ocibuild/pkg/python"
 )
 
 type skipReader struct {
@@ -61,38 +63,66 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 			Err: os.ErrNotExist,
 		}
 	}
+	isDir := ref.IsDir()
 	ref.(*zipEntry).header.Name = newpath
+	if isDir {
+		ref.(*zipEntry).header.Name += "/"
+	}
 	delete(vfs, oldpath)
 	vfs[newpath] = ref
 	return nil
 }
 
 func create(vfs map[string]fsutil.FileReference, mtime time.Time, name string, content *zipEntry) {
+	isDir := strings.HasSuffix(content.header.Name, "/")
 	content.header.Name = name
+	if isDir {
+		content.header.Name += "/"
+	}
+
+	// Discard all permission info except the "execute" bit.
+	var externalAttrs python.ZIPExternalAttributes
+	if isDir {
+		externalAttrs.UNIX = python.ModeFmtDir | 0755
+	} else if isExecutable(content.header) {
+		externalAttrs.UNIX = python.ModeFmtRegular | 0755
+	} else {
+		externalAttrs.UNIX = python.ModeFmtRegular | 0644
+	}
+	content.header.CreatorVersion = 3 << 8 // force Creator=UNIX
+	content.header.ExternalAttrs = externalAttrs.Raw()
+
 	if !mtime.IsZero() {
 		// this kills me, but it reflects what `pip` does
 		content.header.Modified = mtime
 	}
+
 	vfs[name] = content
 }
 
-type tarSysEntry struct {
-	fsutil.FileReference
-	tarHeader *tar.Header
+type tarEntry struct {
+	header *tar.Header
+	open   func() (io.ReadCloser, error)
 }
 
-func (f *tarSysEntry) Sys() interface{} {
-	return f.tarHeader
-}
+func (f *tarEntry) FullName() string             { return path.Clean(f.header.Name) }
+func (f *tarEntry) Name() string                 { return path.Base(f.FullName()) }
+func (f *tarEntry) Size() int64                  { return f.header.FileInfo().Size() }
+func (f *tarEntry) Mode() fs.FileMode            { return f.header.FileInfo().Mode() }
+func (f *tarEntry) ModTime() time.Time           { return f.header.FileInfo().ModTime() }
+func (f *tarEntry) IsDir() bool                  { return f.header.FileInfo().IsDir() }
+func (f *tarEntry) Sys() interface{}             { return f.header }
+func (f *tarEntry) Open() (io.ReadCloser, error) { return f.open() }
 
-func newTarSysEntry(in fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
+func newTarEntry(in fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
 	header, err := tar.FileInfoHeader(in, "")
 	if err != nil {
 		return nil, err
 	}
+	header.Name = in.FullName()
 	fn(header)
-	return &tarSysEntry{
-		FileReference: in,
-		tarHeader:     header,
+	return &tarEntry{
+		header: header,
+		open:   in.Open,
 	}, nil
 }
