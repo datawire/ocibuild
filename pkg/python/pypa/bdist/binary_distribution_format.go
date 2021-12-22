@@ -355,25 +355,27 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		if err != nil {
 			return err
 		}
-		if !bytes.HasPrefix(header, []byte("#python")) {
+		if !bytes.HasPrefix(header, []byte("#!python")) {
 			continue
 		}
 
-		originalOpen := vfs[filename].Open
+		entry := vfs[filename].(*zipEntry)
+
+		originalOpen := entry.open
 		shebang := plat.ConsoleShebang
 		skip := len("#!python")
 		if bytes.Equal(header, []byte("#!pythonw")) {
 			skip++
 			shebang = plat.GraphicalShebang
 		}
-		vfs[filename].(*zipEntry).open = func() (io.ReadCloser, error) {
+		entry.open = func() (io.ReadCloser, error) {
 			inner, err := originalOpen()
 			if err != nil {
 				return nil, err
 			}
 			return readCloser{
 				Reader: io.MultiReader(
-					strings.NewReader(shebang),
+					strings.NewReader("#!"+shebang),
 					&skipReader{
 						skip:  skip,
 						inner: inner,
@@ -382,10 +384,14 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 				Closer: inner,
 			}, nil
 		}
+		entry.header.UncompressedSize64 += 2 + uint64(len(shebang))
+		entry.header.UncompressedSize64 -= uint64(skip)
 
-		externalAttrs := python.ParseZIPExternalAttributes(vfs[filename].(*zipEntry).header.ExternalAttrs)
+		externalAttrs := python.ParseZIPExternalAttributes(entry.header.ExternalAttrs)
 		externalAttrs.UNIX = externalAttrs.UNIX | 0111
-		vfs[filename].(*zipEntry).header.ExternalAttrs = externalAttrs.Raw()
+		entry.header.ExternalAttrs = externalAttrs.Raw()
+
+		vfs[filename] = entry
 	}
 	return nil
 }
