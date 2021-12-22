@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -42,6 +43,26 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 	}
 
 	cmd := dexec.CommandContext(ctx, "pip3", "install", "--no-deps", "--prefix="+destDir, wheelFile)
+	cmd.Env = append(os.Environ(),
+		"PYTHONHASHSEED=0",
+		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+
+	// Remove each of the .pyc files and then re-compile them with `python3 -m compileall`, in
+	// hopes of working around https://bugs.python.org/issue34093 .  Manually remove the .pyc
+	// files instead of passing `--no-compile` to pip because that would result in them being
+	// missing from the RECORD.
+	if err := filepath.Walk(destDir, func(path string, info fs.FileInfo, err error) error {
+		if strings.HasSuffix(path, ".pyc") && !info.IsDir() {
+			return os.Remove(path)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	cmd = dexec.CommandContext(ctx, "python3", "-m", "compileall", destDir)
 	cmd.Env = append(os.Environ(),
 		"PYTHONHASHSEED=0",
 		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
@@ -132,10 +153,7 @@ func TestPIP(t *testing.T) {
 
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
 		ctx := dlog.NewTestContext(t, true)
-		//tmpdir := t.TempDir()
-		tmpdir := "/tmp/x"
-		os.RemoveAll(tmpdir)
-		os.Mkdir(tmpdir, 0755)
+		tmpdir := t.TempDir()
 
 		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
 

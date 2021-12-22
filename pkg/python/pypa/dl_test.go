@@ -134,9 +134,11 @@ func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, c
 	}
 
 	client := simple_repo_api.NewClient(pythonVersion, pythonTags)
+	t.Parallel()
 	for _, testDownload := range downloads {
 		testDownload := testDownload
 		t.Run(testDownload.ExpectedFilename, func(t *testing.T) {
+			t.Parallel()
 			ctx := dlog.NewTestContext(t, true)
 			specifier, err := pep440.ParseSpecifier("==" + testDownload.Version)
 			require.NoError(t, err)
