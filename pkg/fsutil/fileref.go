@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"sort"
+	"strings"
 	"time"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -20,7 +21,23 @@ type FileReference interface {
 
 func LayerFromFileReferences(vfs []FileReference, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	sort.Slice(vfs, func(i, j int) bool {
-		return vfs[i].FullName() < vfs[j].FullName()
+		// Do a part-wise comparison, rather than a simple string compare on .Fullname(),
+		// because "-" < "/" < EOF.
+		iParts := strings.Split(vfs[i].FullName(), "/")
+		jParts := strings.Split(vfs[j].FullName(), "/")
+		for k := 0; k < len(iParts) || k < len(jParts); k++ {
+			var iPart, jPart string
+			if k < len(iParts) {
+				iPart = iParts[k]
+			}
+			if k < len(jParts) {
+				jPart = jParts[k]
+			}
+			if iPart != jPart {
+				return iPart < jPart
+			}
+		}
+		return false
 	})
 
 	var byteWriter bytes.Buffer
