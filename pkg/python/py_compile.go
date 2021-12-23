@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -16,12 +15,18 @@ import (
 	"github.com/datawire/ocibuild/pkg/fsutil"
 )
 
-// A Compiler is a function that takes an source .py file, and emits 1 or more compiled .pyc files.
-type Compiler func(context.Context, time.Time, fsutil.FileReference) (map[string]fsutil.FileReference, error)
+// A Compiler is a function that takes any number of source .py files, and emits any number of
+// compiled .pyc files.
+//
+// The pythonPath argument is a list of `io/fs`-style paths to insert in to PYTHONPATH, so that `in`
+// source files can refer to eachother.
+//
+// The returned output does *not* include directories.  The ordering of the output is undefined.
+type Compiler func(ctx context.Context, clampTime time.Time, pythonPath []string, in []fsutil.FileReference) ([]fsutil.FileReference, error)
 
 // ExternalCompiler returns a `Compiler` that uses an external command to compile .py files to .pyc
-// files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag,
-// so the "py_compile" module is not appropriate.
+// files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag
+// and passes a directory rather than a single file; so the "py_compile" module is not appropriate.
 //
 // For example:
 //
@@ -35,7 +40,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(ctx context.Context, clampTime time.Time, in fsutil.FileReference) (compiled map[string]fsutil.FileReference, err error) {
+	return func(ctx context.Context, clampTime time.Time, pythonPath []string, in []fsutil.FileReference) (_ []fsutil.FileReference, err error) {
 		maybeSetErr := func(_err error) {
 			if _err != nil && err == nil {
 				err = _err
@@ -51,46 +56,95 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			maybeSetErr(os.RemoveAll(tmpdir))
 		}()
 
-		// Get the input file
-		inReader, err := in.Open()
-		if err != nil {
-			return nil, err
-		}
-		inBytes, err := io.ReadAll(inReader)
-		if err != nil {
-			_ = inReader.Close()
-			return nil, err
-		}
-		if err := inReader.Close(); err != nil {
-			return nil, err
+		writeFile := func(inFile fsutil.FileReference) (err error) {
+			maybeSetErr := func(_err error) {
+				if _err != nil && err == nil {
+					err = _err
+				}
+			}
+
+			tmpfilename := filepath.Join(tmpdir, filepath.FromSlash(inFile.FullName()))
+
+			if err := os.MkdirAll(filepath.Dir(tmpfilename), 0777); err != nil {
+				return err
+			}
+
+			// File content
+			outWriter, err := os.Create(tmpfilename)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if outWriter != nil {
+					maybeSetErr(outWriter.Close())
+				}
+			}()
+			inReader, err := inFile.Open()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if inReader != nil {
+					maybeSetErr(inReader.Close())
+				}
+			}()
+			if _, err := io.Copy(outWriter, inReader); err != nil {
+				return err
+			}
+			if err := outWriter.Close(); err != nil {
+				return err
+			}
+			outWriter = nil
+			if err := inReader.Close(); err != nil {
+				return err
+			}
+			inReader = nil
+
+			// File metadata
+			if err := os.Chtimes(tmpfilename, inFile.ModTime(), inFile.ModTime()); err != nil {
+				return err
+			}
+
+			return nil
 		}
 
-		// Write the input file to the tempdir
-		filename := filepath.Join(tmpdir, path.Base(in.FullName()))
-		if err := os.WriteFile(filename, inBytes, 0666); err != nil {
-			return nil, err
-		}
-		if err := os.Chtimes(filename, in.ModTime(), in.ModTime()); err != nil {
-			return nil, err
+		for _, inFile := range in {
+			if err := writeFile(inFile); err != nil {
+				return nil, err
+			}
 		}
 
 		// Run the compiler
 		cmd := dexec.CommandContext(ctx, exe, append(cmdline[1:],
-			"-p", path.Join("/", path.Dir(in.FullName())), // prepend-dir for the in-.pyc filename
-			in.Name(), // file to compile
+			"-s", tmpdir, // strip-dir for the in-.pyc filename
+			"-p", "/", // prepend-dir for the in-.pyc filename
+			tmpdir, // directory to compile
 		)...)
-		cmd.Dir = tmpdir
+
+		cmd.Env = append(os.Environ(),
+			"PYTHONHASHSEED=0")
+		if len(pythonPath) > 0 {
+			var pythonPathEnv []string
+			for _, dir := range pythonPath {
+				pythonPathEnv = append(pythonPathEnv, filepath.Join(tmpdir, filepath.FromSlash(dir)))
+			}
+			if e := os.Getenv("PYTHONPATH"); e != "" {
+				pythonPathEnv = append(pythonPathEnv, e)
+			}
+			cmd.Env = append(cmd.Env,
+				"PYTHONPATH="+strings.Join(pythonPathEnv, string(filepath.ListSeparator)))
+		}
 		if !clampTime.IsZero() {
-			cmd.Env = append(os.Environ(),
-				"PYTHONHASHSEED=0",
+			cmd.Env = append(cmd.Env,
 				fmt.Sprintf("SOURCE_DATE_EPOCH=%d", clampTime.Unix()))
 		}
+
 		if err := cmd.Run(); err != nil {
 			return nil, err
 		}
 
 		// Read in the output
-		vfs := make(map[string]fsutil.FileReference)
+		var ret []fsutil.FileReference
 		// vfs["slash-path"] and zipEntry.Name are slash-paths, so use fs.WalkDir instead of
 		// filepath.Walk so that we don't need to worry about converting between forward and
 		// backward slashes.
@@ -99,10 +153,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			if e != nil {
 				return e
 			}
-			if p == "." {
-				return nil
-			}
-			if !strings.HasSuffix(p, ".pyc") && !d.IsDir() {
+			if d.IsDir() || !strings.HasSuffix(p, ".pyc") {
 				return nil
 			}
 			info, err := d.Info()
@@ -110,30 +161,27 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 				return err
 			}
 			var content []byte
-			if !d.IsDir() {
-				fh, err := dirFS.Open(p)
-				if err != nil {
-					return err
-				}
-				defer func() {
-					_ = fh.Close()
-				}()
-				content, err = io.ReadAll(fh)
-				if err != nil {
-					return err
-				}
+			fh, err := dirFS.Open(p)
+			if err != nil {
+				return err
 			}
-			fullname := path.Join(path.Dir(in.FullName()), p)
-			vfs[fullname] = &fsutil.InMemFileReference{
+			defer func() {
+				_ = fh.Close()
+			}()
+			content, err = io.ReadAll(fh)
+			if err != nil {
+				return err
+			}
+			ret = append(ret, &fsutil.InMemFileReference{
 				FileInfo:  info,
-				MFullName: fullname,
+				MFullName: p,
 				MContent:  content,
-			}
+			})
 			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
-		return vfs, nil
+		return ret, nil
 	}, nil
 }

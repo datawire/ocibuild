@@ -315,17 +315,22 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
 	//      enough to remove .pyc even if it is not mentioned in RECORD.)
+	var srcs []fsutil.FileReference
 	for _, file := range vfs {
 		if !strings.HasSuffix(file.Name(), ".py") {
 			continue
 		}
-		newFiles, err := plat.PyCompile(ctx, maxTime, file)
-		if err != nil {
-			return nil, "", fmt.Errorf("py_compile: %w", err)
-		}
-		for _, newFile := range newFiles {
-			vfs[newFile.FullName()] = newFile
-		}
+		srcs = append(srcs, file)
+	}
+	outs, err := plat.PyCompile(ctx, maxTime, []string{
+		plat.Scheme.PureLib,
+		plat.Scheme.PlatLib,
+	}, srcs)
+	if err != nil {
+		return nil, "", fmt.Errorf("py_compile: %w", err)
+	}
+	for _, newFile := range outs {
+		vfs[newFile.FullName()] = newFile
 	}
 
 	return vfs, path.Join(dstDir, distInfoDir), nil
@@ -402,8 +407,8 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		hash, size, err := genRecord(originalOpen)
 		vfs[filename] = &withRecord{
 			FileReference: entry,
-			RecordHash: hash,
-			RecordSize: size,
+			RecordHash:    hash,
+			RecordSize:    size,
 		}
 	}
 	return nil
