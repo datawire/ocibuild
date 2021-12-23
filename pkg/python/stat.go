@@ -17,42 +17,42 @@ type StatMode uint16
 const (
 	// 16 bits = 5⅓ octal characters
 
-	ModeFmt StatMode = 017_0000 // mask for the type bits
+	ModeFmt StatMode = 0o17_0000 // mask for the type bits
 
-	_ModeFmtUnused000  StatMode = 000_0000
-	ModeFmtNamedPipe   StatMode = 001_0000 // type: named pipe (FIFO)
-	ModeFmtCharDevice  StatMode = 002_0000 // type: character device
-	_ModeFmtUnused003  StatMode = 003_0000
-	ModeFmtDir         StatMode = 004_0000 // type: directory
-	_ModeFmtUnused005  StatMode = 005_0000
-	ModeFmtBlockDevice StatMode = 006_0000 // type: block device
-	_ModeFmtUnused007  StatMode = 007_0000
-	ModeFmtRegular     StatMode = 010_0000 // type: regular file
-	_ModeFmtUnused011  StatMode = 011_0000
-	ModeFmtSymlink     StatMode = 012_0000 // type: symbolic link
-	_ModeFmtUnused013  StatMode = 013_0000
-	ModeFmtSocket      StatMode = 014_0000 // type: socket file
-	_ModeFmtUnused015  StatMode = 015_0000
-	ModeFmtWhiteout    StatMode = 016_0000 // type: whiteout (non-Linux)
-	_ModeFmtUnused017  StatMode = 017_0000
+	_ModeFmtUnused000  StatMode = 0o00_0000
+	ModeFmtNamedPipe   StatMode = 0o01_0000 // type: named pipe (FIFO)
+	ModeFmtCharDevice  StatMode = 0o02_0000 // type: character device
+	_ModeFmtUnused003  StatMode = 0o03_0000
+	ModeFmtDir         StatMode = 0o04_0000 // type: directory
+	_ModeFmtUnused005  StatMode = 0o05_0000
+	ModeFmtBlockDevice StatMode = 0o06_0000 // type: block device
+	_ModeFmtUnused007  StatMode = 0o07_0000
+	ModeFmtRegular     StatMode = 0o10_0000 // type: regular file
+	_ModeFmtUnused011  StatMode = 0o11_0000
+	ModeFmtSymlink     StatMode = 0o12_0000 // type: symbolic link
+	_ModeFmtUnused013  StatMode = 0o13_0000
+	ModeFmtSocket      StatMode = 0o14_0000 // type: socket file
+	_ModeFmtUnused015  StatMode = 0o15_0000
+	ModeFmtWhiteout    StatMode = 0o16_0000 // type: whiteout (non-Linux)
+	_ModeFmtUnused017  StatMode = 0o17_0000
 
-	ModePerm StatMode = 000_7777 // mask for permission bits
+	ModePerm StatMode = 0o00_7777 // mask for permission bits
 
-	ModePermSetUID StatMode = 000_4000 // permission: set user id
-	ModePermSetGID StatMode = 000_2000 // permission: set group ID
-	ModePermSticky StatMode = 000_1000 // permission: sticky bit
+	ModePermSetUID StatMode = 0o00_4000 // permission: set user id
+	ModePermSetGID StatMode = 0o00_2000 // permission: set group ID
+	ModePermSticky StatMode = 0o00_1000 // permission: sticky bit
 
-	ModePermUsrR StatMode = 000_0400 // permission: user: read
-	ModePermUsrW StatMode = 000_0200 // permission: user: write
-	ModePermUsrX StatMode = 000_0100 // permission: user: execute
+	ModePermUsrR StatMode = 0o00_0400 // permission: user: read
+	ModePermUsrW StatMode = 0o00_0200 // permission: user: write
+	ModePermUsrX StatMode = 0o00_0100 // permission: user: execute
 
-	ModePermGrpR StatMode = 000_0040 // permission: group: read
-	ModePermGrpW StatMode = 000_0020 // permission: group: write
-	ModePermGrpX StatMode = 000_0010 // permission: group: execute
+	ModePermGrpR StatMode = 0o00_0040 // permission: group: read
+	ModePermGrpW StatMode = 0o00_0020 // permission: group: write
+	ModePermGrpX StatMode = 0o00_0010 // permission: group: execute
 
-	ModePermOthR StatMode = 000_0004 // permission: other: read
-	ModePermOthW StatMode = 000_0002 // permission: other: write
-	ModePermOthX StatMode = 000_0001 // permission: other: execute
+	ModePermOthR StatMode = 0o00_0004 // permission: other: read
+	ModePermOthW StatMode = 0o00_0002 // permission: other: write
+	ModePermOthX StatMode = 0o00_0001 // permission: other: execute
 )
 
 // ToGo translates pm from a Statmode to an fs.FileMode.
