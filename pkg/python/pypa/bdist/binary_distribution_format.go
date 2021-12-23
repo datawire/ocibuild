@@ -654,7 +654,14 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 	}
 	defer wheelFile.Close()
 
-	kvReader := textproto.NewReader(bufio.NewReader(wheelFile))
+	// textproto.Reader.ReadMIMEHeader() expects a blank line to mark the end of the header and
+	// the start of the body.  But in WHEEL there is no body, so the blank line should be
+	// optional.  So use an io.MultiReader to add a few trailing CRLFs to keep ReadMIMEHeader
+	// happy no matter what WHEEL's trailing newline situation is.
+	kvReader := textproto.NewReader(bufio.NewReader(io.MultiReader(
+		wheelFile,
+		strings.NewReader("\r\n\r\n\r\n"),
+	)))
 	return kvReader.ReadMIMEHeader()
 	//
 	// #. ``Wheel-Version`` is the version number of the Wheel specification.
