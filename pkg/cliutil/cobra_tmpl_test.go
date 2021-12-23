@@ -38,8 +38,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
@@ -71,8 +71,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"\n" +
@@ -101,8 +101,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
@@ -138,8 +138,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//        1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                         \n"   \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
