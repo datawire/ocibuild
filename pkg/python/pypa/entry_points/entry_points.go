@@ -1,4 +1,4 @@
-//Package entry_points implementes the PyPA Entry points specification.
+// Package entry_points implementes the PyPA Entry points specification.
 //
 // https://packaging.python.org/en/latest/specifications/entry-points/
 package entry_points

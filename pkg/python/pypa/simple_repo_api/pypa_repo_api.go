@@ -26,10 +26,10 @@ type Client struct {
 	SupportedTags pep425.Installer
 }
 
-func NewClient(Python *pep440.Version, supportedTags pep425.Installer) Client {
+func NewClient(python *pep440.Version, supportedTags pep425.Installer) Client {
 	return Client{
 		Client: pep503.Client{
-			Python:   Python,
+			Python:   python,
 			HTMLHook: pep629.HTMLVersionCheck,
 		},
 		SupportedTags: supportedTags,

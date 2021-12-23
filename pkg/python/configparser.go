@@ -108,10 +108,11 @@ func (p *ConfigParser) Parse(fp io.Reader) (Config, error) {
 				break
 			}
 		}
-		if curVal != nil && lineIndentLevel > 0 && lineIndentLevel > curIndentLevel {
+		switch {
+		case curVal != nil && lineIndentLevel > 0 && lineIndentLevel > curIndentLevel:
 			// continuation line
 			curVal = append(curVal, value)
-		} else if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		case strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]"):
 			// section header
 			flushKV()
 			curIndentLevel = lineIndentLevel
@@ -122,7 +123,7 @@ func (p *ConfigParser) Parse(fp io.Reader) (Config, error) {
 				return nil, fmt.Errorf("line %d: duplicate section name %q", lineno, sectName)
 			}
 			curSection = config[sectName]
-		} else {
+		default:
 			// start of a k/v pair
 			flushKV()
 			curIndentLevel = lineIndentLevel

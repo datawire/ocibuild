@@ -4,6 +4,7 @@ linters:
     - depguard
     - forbidigo
     - gci
+    - gocritic
     - gofmt
     - gofumpt
     - nolintlint
@@ -31,3 +32,11 @@ linters-settings:
     allow-leading-space: false
     require-explanation: true
     require-specific: true
+issues:
+  exclude-rules:
+    ## Exceptions for borrowed code #################################
+
+    - # Don't be too nitpicky on borrowed code
+      path: 'borrowed_.*\.go$'
+      linters:
+        - gocritic

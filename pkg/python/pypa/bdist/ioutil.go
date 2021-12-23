@@ -82,11 +82,12 @@ func create(vfs map[string]fsutil.FileReference, mtime time.Time, name string, c
 
 	// Discard all permission info except the "execute" bit.
 	var externalAttrs python.ZIPExternalAttributes
-	if isDir {
+	switch {
+	case isDir:
 		externalAttrs.UNIX = python.ModeFmtDir | 0o755
-	} else if isExecutable(content.header) {
+	case isExecutable(content.header):
 		externalAttrs.UNIX = python.ModeFmtRegular | 0o755
-	} else {
+	default:
 		externalAttrs.UNIX = python.ModeFmtRegular | 0o644
 	}
 	content.header.CreatorVersion = 3 << 8 // force Creator=UNIX

@@ -30,13 +30,13 @@ func jsonDumps(typedObj interface{}) ([]byte, error) {
 		depth := len(mapStack) - 1
 		if mapStack[depth] < 0 {
 			// we're inside an array
-			mapStack[depth] = mapStack[depth] - 1
+			mapStack[depth]--
 		} else {
 			// we're inside a map
 			if mapStack[depth]%2 == 1 {
 				_, _ = dst.WriteString(": ")
 			}
-			mapStack[depth] = mapStack[depth] + 1
+			mapStack[depth]++
 		}
 	}
 	for {

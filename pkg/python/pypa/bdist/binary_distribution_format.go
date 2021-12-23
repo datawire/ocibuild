@@ -318,7 +318,7 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	// https://packaging.python.org/en/latest/specifications/recording-installed-packages/
 	// (implemented as a PostInstallHook) overrides us.
 	//
-	//create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
+	// create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
 
 	//   e. Remove empty ``distribution-1.0.data`` directory.
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
@@ -408,7 +408,7 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		entry.header.UncompressedSize64 -= uint64(skip)
 
 		externalAttrs := python.ParseZIPExternalAttributes(entry.header.ExternalAttrs)
-		externalAttrs.UNIX = externalAttrs.UNIX | 0o111
+		externalAttrs.UNIX |= 0o111
 		entry.header.ExternalAttrs = externalAttrs.Raw()
 
 		// Arrange for RECORD to contain the pre-rewritten hash and size.
