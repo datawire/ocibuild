@@ -193,6 +193,7 @@ func InstallWheel(
 // This PEP was accepted, and the defined wheel version updated to 1.0, by
 // Nick Coghlan on 16th February, 2013 [1]_
 
+//nolint:gochecknoglobals // Would be 'const'.
 var specVersion, _ = pep440.ParseVersion("1.0")
 
 //
@@ -725,6 +726,8 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 //    algorithm must be sha256 or better; specifically, md5 and sha1 are
 //    not permitted, as signed wheel files rely on the strong hashes in
 //    RECORD to validate the integrity of the archive.
+
+//nolint:gochecknoglobals // Would be 'const'.
 var strongHashes = map[string]func() hash.Hash{
 	// The spec is an open-ended list of hashes, so here's what PIP 20.3.4
 	// pip/_internal/utils/hashes.py includes:

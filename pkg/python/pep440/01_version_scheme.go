@@ -422,6 +422,7 @@ func (ver PublicVersion) Micro() int { return ver.releaseSegment(2) }
 //
 //
 
+//nolint:gochecknoglobals // Would be 'const'.
 var preReleaseOrder = map[string]int{
 	"a":     -3,
 	"alpha": -3,

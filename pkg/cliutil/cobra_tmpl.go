@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//nolint:gochecknoinits // Manually calling it would be a pain.
 func init() {
 	cobra.AddTemplateFunc("getTerminalWidth", GetTerminalWidth)
 	cobra.AddTemplateFunc("wrap", Wrap)

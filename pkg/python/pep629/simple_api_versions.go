@@ -14,6 +14,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
 
+//nolint:gochecknoglobals // Would be 'const'.
 var SupportedVersion, _ = pep440.ParseVersion("1.0")
 
 func GetVersion(doc *html.Node) (*pep440.Version, error) {

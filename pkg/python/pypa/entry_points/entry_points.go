@@ -19,6 +19,7 @@ import (
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 )
 
+//nolint:gochecknoglobals // Would be 'const'.
 var (
 	scriptTmpl = template.Must(template.
 			New("entry_point.py").

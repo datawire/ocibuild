@@ -5,6 +5,8 @@ linters:
     - exhaustivestruct
     - forbidigo
     - gci
+    - gochecknoglobals
+    - gochecknoinits
     - gocritic
     - gofmt
     - gofumpt
@@ -59,6 +61,9 @@ issues:
   exclude-rules:
     ## Personal exceptions ##########################################
 
+    - # The "main" package is allowed to use globals and init()
+      path: '^[^/]*$'
+      linters: [gochecknoglobals, gochecknoinits]
     - # Allow Cmp methods to be (a, b)
       linters: [revive]
       text: "receiver-naming: receiver name a should be consistent with previous receiver name"

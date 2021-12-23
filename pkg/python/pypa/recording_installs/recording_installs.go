@@ -30,6 +30,8 @@ import (
 
 // hashAlgorithms is specified to match `hashlib.algorithms_guaranteed`.  As of this writing, it is
 // in sync with Pytho 3.9.9 hashlib.
+//
+//nolint:gochecknoglobals // Would be 'const'.
 var hashAlgorithms = map[string]func() hash.Hash{
 	"md5":    md5.New,
 	"sha1":   sha1.New,
