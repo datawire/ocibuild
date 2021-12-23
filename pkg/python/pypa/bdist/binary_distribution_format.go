@@ -88,12 +88,12 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime time.Time, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bdist.InstallWheel: validate python.Platform: %w", err)
 	}
 
 	zipReader, err := zip.OpenReader(wheelfilename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bdist.Installwheel: open wheel: %w", err)
 	}
 	defer zipReader.Close()
 
@@ -102,7 +102,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 	}
 
 	if err := wh.integrityCheck(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bdist.InstallWheel: wheel integrity: %w", err)
 	}
 
 	if maxTime.IsZero() {
@@ -127,12 +127,12 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 
 	vfs, installedDistInfoDir, err := wh.installToVFS(ctx, plat, minTime, maxTime)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bdist.InstallWheel: %w", err)
 	}
 
 	if hook != nil {
 		if err := hook(ctx, maxTime, vfs, installedDistInfoDir); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("bdist.InstallWheel: post-install hook: %w", err)
 		}
 	}
 
@@ -163,12 +163,16 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 			header.Gname = plat.GName
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("bdist.InstallWheel: chown: %w", err)
 		}
 		refs = append(refs, ref)
 	}
 
-	return fsutil.LayerFromFileReferences(refs, maxTime, opts...)
+	layer, err := fsutil.LayerFromFileReferences(refs, maxTime, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("bdist.InstallWheel: generate layer: %w", err)
+	}
+	return layer, nil
 }
 
 //
@@ -213,13 +217,13 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	//   a. Parse ``distribution-1.0.dist-info/WHEEL``.
 	metadata, err := wh.parseDistInfoWheel()
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("parse .dist-info/Wheel: %w", err)
 	}
 	//   b. Check that installer is compatible with Wheel-Version.  Warn if
 	//      minor version is greater, abort if major version is greater.
 	wheelVersion, err := parseVersion(metadata.Get("Wheel-Version"))
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("parse Wheel-Version: %w", err)
 	}
 	if wheelVersion[0] > specVersion[0] {
 		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
@@ -257,7 +261,9 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	//      ``distutils.command.install``.
 	distInfoDir, err := wh.distInfoDir()
 	if err != nil {
-		return nil, "", err
+		// This already ran successfully inside of .parseDistInfoWheel(); we should get the
+		// cached value.
+		panic("should not happen")
 	}
 	vfsTypes := make(map[string]string)
 	dataDir := path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data")
@@ -291,13 +297,13 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 		newFullName := path.Join(dstDataDir, rest)
 		vfsTypes[newFullName] = key
 		if err := rename(vfs, fullName, newFullName); err != nil {
-			return nil, "", err
+			return nil, "", fmt.Errorf("spread: %w", err)
 		}
 	}
 	//   c. If applicable, update scripts starting with ``#!python`` to point
 	//      to the correct interpreter.
 	if err := rewritePython(plat, vfs, vfsTypes); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("rewrite shebangs: %w", err)
 	}
 	//   d. Update ``distribution-1.0.dist-info/RECORD`` with the installed
 	//      paths.
