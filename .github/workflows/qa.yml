@@ -22,6 +22,12 @@ jobs:
           pip --version
           pip3 --version
       - run: make check
+      - name: Report test coverage to coveralls.io
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          make tools/bin/goveralls &&
+          tools/bin/goveralls -coverprofile=ocibuild.cov -service=github
   lint:
     runs-on: ubuntu-latest
     steps:
