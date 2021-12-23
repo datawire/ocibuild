@@ -69,9 +69,15 @@ install-man: man
 
 # Check
 
+ocibuild.cov: check
+	test -e $@
+	touch $@
 check:
-	go test -race ./...
+	go test -count=1 -coverprofile=ocibuild.cov -coverpkg=./... -race ./...
 .PHONY: check
+
+%.cov.html: %.cov
+	go tool cover -html=$< -o=$@
 
 lint: tools/bin/golangci-lint
 	tools/bin/golangci-lint run ./...
