@@ -25,7 +25,7 @@ func DumpLayerFull(layer ociv1.Layer) (str string, err error) {
 		}
 	}
 
-	var spewConfig = spew.ConfigState{
+	spewConfig := spew.ConfigState{
 		Indent:                  "  ",
 		DisableCapacities:       true,
 		DisablePointerAddresses: true,

@@ -93,7 +93,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		header := &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     path.Join(installedDistInfoDir, "INSTALLER"),
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(len(content)),
 			ModTime:  clampTime,
 		}
@@ -149,7 +149,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		header = &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     path.Join(installedDistInfoDir, "RECORD"),
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(recordBytes.Len()),
 			ModTime:  clampTime,
 		}

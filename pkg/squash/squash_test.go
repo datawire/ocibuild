@@ -63,7 +63,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 			Typeflag: file.Type,
 			Linkname: file.Linkname,
 			Size:     0,
-			Mode:     0644,
+			Mode:     0o644,
 		}
 		if err := tarWriter.WriteHeader(header); err != nil {
 			t.Fatal(err)

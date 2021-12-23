@@ -29,10 +29,12 @@ func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, op
 	}()
 
 	// TODO(lukeshu): Call or mimic code from Ko in order to figure out multi-arch support.
-	args := append([]string{"go", "build",
+	args := append([]string{
+		"go", "build",
 		"-trimpath",
 		"-o", tmpdir,
-		"--"}, pkgnames...)
+		"--",
+	}, pkgnames...)
 	cmd := dexec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr

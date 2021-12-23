@@ -58,7 +58,7 @@ const (
 // ToGo translates pm from a Statmode to an fs.FileMode.
 func (pm StatMode) ToGo() fs.FileMode {
 	// permissions: base
-	gm := fs.FileMode(pm & 0777)
+	gm := fs.FileMode(pm & 0o777)
 
 	// permissions: extended
 	if pm&ModePermSetGID != 0 {
@@ -95,7 +95,7 @@ func (pm StatMode) ToGo() fs.FileMode {
 // ModeFromGo translates an fs.FileMode to a StatMode.
 func ModeFromGo(gm fs.FileMode) StatMode {
 	// permissions: base
-	pm := StatMode(gm & 0777)
+	pm := StatMode(gm & 0o777)
 
 	// permissions: extended
 	if gm&fs.ModeSetgid != 0 {
@@ -158,19 +158,19 @@ func (pm StatMode) String() string {
 		"?pc?d?b?-?l?s?w?"[pm>>12],
 
 		// owner
-		"-r"[(pm>>8)&01],
-		"-w"[(pm>>7)&01],
-		"-xSs"[((pm>>6)&01)|((pm>>10)&02)],
+		"-r"[(pm>>8)&0o1],
+		"-w"[(pm>>7)&0o1],
+		"-xSs"[((pm>>6)&0o1)|((pm>>10)&0o2)],
 
 		// group
-		"-r"[(pm>>5)&01],
-		"-w"[(pm>>4)&01],
-		"-xSs"[((pm>>3)&01)|((pm>>9)&02)],
+		"-r"[(pm>>5)&0o1],
+		"-w"[(pm>>4)&0o1],
+		"-xSs"[((pm>>3)&0o1)|((pm>>9)&0o2)],
 
 		// group
-		"-r"[(pm>>2)&01],
-		"-w"[(pm>>1)&01],
-		"-xTt"[((pm>>0)&01)|((pm>>8)&02)],
+		"-r"[(pm>>2)&0o1],
+		"-w"[(pm>>1)&0o1],
+		"-xTt"[((pm>>0)&0o1)|((pm>>8)&0o2)],
 	}
 
 	return string(buf[:])

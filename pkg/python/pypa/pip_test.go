@@ -29,7 +29,7 @@ import (
 )
 
 func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, error) {
-	if err := os.MkdirAll(destDir, 0777); err != nil {
+	if err := os.MkdirAll(destDir, 0o777); err != nil {
 		return nil, err
 	}
 
@@ -90,7 +90,6 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 
 // Return a python.Platform that mimics the behavior of `pip3 install --prefix=${destDir}`.
 func pipPlatform(ctx context.Context, destDir string) (python.Platform, error) {
-
 	// 1. Look up user info.
 	usr, err := user.Current()
 	if err != nil {
@@ -155,7 +154,7 @@ func TestPIP(t *testing.T) {
 		ctx := dlog.NewTestContext(t, true)
 		tmpdir := t.TempDir()
 
-		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0o644))
 
 		// pip reference install
 		expLayer, err := pipInstall(ctx,

@@ -144,7 +144,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 					FileInfo: (&tar.Header{
 						Typeflag: tar.TypeDir,
 						Name:     dir,
-						Mode:     0755,
+						Mode:     0o755,
 						ModTime:  maxTime,
 					}).FileInfo(),
 					MFullName: dir,
@@ -408,7 +408,7 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		entry.header.UncompressedSize64 -= uint64(skip)
 
 		externalAttrs := python.ParseZIPExternalAttributes(entry.header.ExternalAttrs)
-		externalAttrs.UNIX = externalAttrs.UNIX | 0111
+		externalAttrs.UNIX = externalAttrs.UNIX | 0o111
 		entry.header.ExternalAttrs = externalAttrs.Raw()
 
 		// Arrange for RECORD to contain the pre-rewritten hash and size.

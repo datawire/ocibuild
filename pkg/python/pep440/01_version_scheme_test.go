@@ -18,7 +18,7 @@ func TestSort(t *testing.T) {
 	t.Parallel()
 	testcases := map[string][]string{
 		// from the spec
-		"final-releases-1": []string{
+		"final-releases-1": {
 			"0.9",
 			"0.9.1",
 			"0.9.2",
@@ -30,58 +30,58 @@ func TestSort(t *testing.T) {
 			"2.0",
 			"2.0.1",
 		},
-		"final-releases-2": []string{
+		"final-releases-2": {
 			"2012.4",
 			"2012.7",
 			"2012.10",
 			"2013.1",
 			"2013.6",
 		},
-		"pre-releases": []string{
+		"pre-releases": {
 			"4.3a2",  // Alpha release
 			"4.3b2",  // Beta release
 			"4.3rc2", // Release Candidate
 			"4.3",    // Final release
 		},
-		"post-releases": []string{
+		"post-releases": {
 			"4.3a2.post1",  // Post-release of an alpha release
 			"4.3b2.post1",  // Post-release of a beta release
 			"4.3rc2.post1", // Post-release of a release candidate
 		},
-		"developmental-releases": []string{
+		"developmental-releases": {
 			"4.3a2.dev1",     // Developmental release of an alpha release
 			"4.3b2.dev1",     // Developmental release of a beta release
 			"4.3rc2.dev1",    // Developmental release of a release candidate
 			"4.3.post2.dev1", // Developmental release of a post-release
 		},
-		"version-epochs-1": []string{
+		"version-epochs-1": {
 			"1.0",
 			"1.1",
 			"2.0",
 			"2013.10",
 			"2014.04",
 		},
-		"version-epochs-2": []string{
+		"version-epochs-2": {
 			"2013.10",
 			"2014.04",
 			"1!1.0",
 			"1!1.1",
 			"1!2.0",
 		},
-		"examples-of-compliant-version-schemes-1": []string{
+		"examples-of-compliant-version-schemes-1": {
 			"0.1",
 			"0.2",
 			"0.3",
 			"1.0",
 			"1.1",
 		},
-		"examples-of-compliant-version-schemes-2": []string{
+		"examples-of-compliant-version-schemes-2": {
 			"1.1.0",
 			"1.1.1",
 			"1.1.2",
 			"1.2.0",
 		},
-		"examples-of-compliant-version-schemes-3": []string{
+		"examples-of-compliant-version-schemes-3": {
 			"0.9",
 			"1.0a1",
 			"1.0a2",
@@ -90,7 +90,7 @@ func TestSort(t *testing.T) {
 			"1.0",
 			"1.1a1",
 		},
-		"examples-of-compliant-version-schemes-4": []string{
+		"examples-of-compliant-version-schemes-4": {
 			"0.9",
 			"1.0.dev1",
 			"1.0.dev2",
@@ -102,7 +102,7 @@ func TestSort(t *testing.T) {
 			"1.0.post1",
 			"1.1.dev1",
 		},
-		"examples-of-compliant-version-schemes-5": []string{
+		"examples-of-compliant-version-schemes-5": {
 			"2012.1",
 			"2012.2",
 			"2012.3",
@@ -110,7 +110,7 @@ func TestSort(t *testing.T) {
 			"2013.1",
 			"2013.2",
 		},
-		"summary-of-permitted-suffixes-and-relative-ordering": []string{
+		"summary-of-permitted-suffixes-and-relative-ordering": {
 			"1.0.dev456",
 			"1.0a1",
 			"1.0a2.dev456",
@@ -131,7 +131,7 @@ func TestSort(t *testing.T) {
 			"1.1.dev1",
 		},
 		// our own
-		"local-segment": []string{
+		"local-segment": {
 			"1.0",
 			"1.0+a",
 			"1.0+b",

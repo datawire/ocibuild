@@ -95,7 +95,7 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 				header := &tar.Header{
 					Typeflag: tar.TypeReg,
 					Name:     path.Join(plat.Scheme.Scripts[1:], k),
-					Mode:     0755,
+					Mode:     0o755,
 					Size:     int64(buf.Len()),
 					ModTime:  clampTime,
 				}

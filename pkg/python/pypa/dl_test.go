@@ -20,6 +20,7 @@ import (
 func TestDownload(t *testing.T) {
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {})
 }
+
 func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, content []byte)) {
 	type Download struct {
 		Name             string

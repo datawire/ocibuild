@@ -50,7 +50,7 @@ func RecordRequested(requested string) bdist.PostInstallHook {
 		header := &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     fullname,
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(len(content)),
 			ModTime:  clampTime,
 		}

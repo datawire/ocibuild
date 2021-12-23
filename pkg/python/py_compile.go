@@ -65,7 +65,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 
 			tmpfilename := filepath.Join(tmpdir, filepath.FromSlash(inFile.FullName()))
 
-			if err := os.MkdirAll(filepath.Dir(tmpfilename), 0777); err != nil {
+			if err := os.MkdirAll(filepath.Dir(tmpfilename), 0o777); err != nil {
 				return err
 			}
 

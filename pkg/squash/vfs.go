@@ -58,7 +58,7 @@ func (f *fsfile) Get(child string) *fsfile {
 			f.body = nil
 			f.Get(".wh..wh..opq").Set(&tar.Header{
 				Typeflag: tar.TypeReg,
-				Mode:     0644,
+				Mode:     0o644,
 			}, nil)
 		}
 		// Look up the child
@@ -110,7 +110,7 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 		// we can't know if any given file was such a dir-to-non-dir conversion.
 		f.Get(".wh..wh..opq").Set(&tar.Header{
 			Typeflag: tar.TypeReg,
-			Mode:     0644,
+			Mode:     0o644,
 		}, nil)
 	}
 	if f.parent != nil {

@@ -37,7 +37,7 @@ func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
 // This is based off of pip/_internal/utils/unpacking.py:zip_item_is_executable()`
 func isExecutable(fh zip.FileHeader) bool {
 	externalAttrs := python.ParseZIPExternalAttributes(fh.ExternalAttrs)
-	return externalAttrs.UNIX.IsRegular() && (externalAttrs.UNIX&0111 != 0)
+	return externalAttrs.UNIX.IsRegular() && (externalAttrs.UNIX&0o111 != 0)
 }
 
 // distInfoDir returns the "{name}.dist-info" directory for the wheel file.

@@ -61,7 +61,6 @@ func init() {
 			"LIMITATION: While checksums are verified, signatures are not.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(flags *cobra.Command, args []string) error {
-
 			yamlBytes, err := os.ReadFile(platFile)
 			if err != nil {
 				return err

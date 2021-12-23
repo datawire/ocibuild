@@ -44,7 +44,7 @@ func Record(urlData DirectURL) bdist.PostInstallHook {
 		header := &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     path.Join(installedDistInfoDir, "direct_url.json"),
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(len(bs)),
 			ModTime:  clampTime,
 		}

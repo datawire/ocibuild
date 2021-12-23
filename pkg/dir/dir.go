@@ -40,7 +40,7 @@ func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...o
 
 	if prefix != nil {
 		if prefix.Mode == 0 {
-			prefix.Mode = 0755
+			prefix.Mode = 0o755
 		}
 		var dirs []string
 		for dir := prefix.DirName; dir != "."; dir = path.Dir(dir) {

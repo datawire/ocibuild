@@ -61,7 +61,7 @@ func TestEquivalentSpecifiers(t *testing.T) {
 		},
 		pep440.LocalVersion{
 			PublicVersion: pep440.PublicVersion{Epoch: 0, Release: []int{2, 418, 849}, Pre: nil, Post: intPtr(2328), Dev: intPtr(109)},
-			Local:         []intstr.IntOrString{intstr.IntOrString{Type: 0, IntVal: 830, StrVal: ""}, intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "je4kz"}, intstr.IntOrString{Type: 0, IntVal: 2083, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 2694, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 1127, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 142, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 1122, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 2676, StrVal: ""}, intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"}},
+			Local:         []intstr.IntOrString{{Type: 0, IntVal: 830, StrVal: ""}, {Type: 1, IntVal: 0, StrVal: "je4kz"}, {Type: 0, IntVal: 2083, StrVal: ""}, {Type: 0, IntVal: 2694, StrVal: ""}, {Type: 0, IntVal: 1127, StrVal: ""}, {Type: 0, IntVal: 142, StrVal: ""}, {Type: 0, IntVal: 1122, StrVal: ""}, {Type: 0, IntVal: 2676, StrVal: ""}, {Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"}},
 		},
 	}
 

@@ -64,8 +64,8 @@ func (inst Installer) Supports(t Tag) bool {
 func (inst Installer) Preference(t Tag) int {
 	for i, it := range inst {
 		if Intersect([]Tag{it}, []Tag{t}) {
-			return i+1
+			return i + 1
 		}
 	}
-	return len(inst)+1
+	return len(inst) + 1
 }

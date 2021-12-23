@@ -666,9 +666,9 @@ func parseVersion(str string) (*Version, error) {
 		m[reVersion.SubexpIndex("pre_l")],
 		m[reVersion.SubexpIndex("pre_n")],
 		map[string][]string{
-			"a":  []string{"alpha"},
-			"b":  []string{"beta"},
-			"rc": []string{"c", "pre", "preview"},
+			"a":  {"alpha"},
+			"b":  {"beta"},
+			"rc": {"c", "pre", "preview"},
 		})
 	if err != nil {
 		return nil, fmt.Errorf("pre-release: %w", err)
@@ -684,7 +684,7 @@ func parseVersion(str string) (*Version, error) {
 		m[reVersion.SubexpIndex("post_l")],
 		m[reVersion.SubexpIndex("post_n1")]+m[reVersion.SubexpIndex("post_n2")],
 		map[string][]string{
-			"post": []string{"", "rev", "r"},
+			"post": {"", "rev", "r"},
 		})
 	if err != nil {
 		return nil, fmt.Errorf("post-release: %w", err)

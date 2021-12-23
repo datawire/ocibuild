@@ -88,7 +88,7 @@ const (
 	CmpOp_GE
 	CmpOp_LT
 	CmpOp_GT
-	//CmpOp_Arbitrary
+	// CmpOp_Arbitrary
 	_CmpOp_End
 )
 
@@ -365,6 +365,7 @@ func matchStrictMatch(spec, ver Version) bool {
 	}
 	return spec.Cmp(ver) == 0
 }
+
 func matchPrefixMatch(_spec, _ver Version) bool {
 	spec, ver := _spec.PublicVersion, _ver.PublicVersion
 	const (
@@ -452,6 +453,7 @@ func matchPrefixMatch(_spec, _ver Version) bool {
 func matchStrictExclude(spec, ver Version) bool {
 	return !matchStrictMatch(spec, ver)
 }
+
 func matchPrefixExclude(spec, ver Version) bool {
 	return !matchPrefixMatch(spec, ver)
 }
@@ -476,6 +478,7 @@ func matchPrefixExclude(spec, ver Version) bool {
 func matchLE(spec, ver Version) bool {
 	return spec.Cmp(ver) >= 0
 }
+
 func matchGE(spec, ver Version) bool {
 	return spec.Cmp(ver) <= 0
 }
@@ -513,6 +516,7 @@ func matchGE(spec, ver Version) bool {
 func matchLT(spec, ver Version) bool {
 	return spec.Cmp(ver) > 0
 }
+
 func matchGT(spec, ver Version) bool {
 	return spec.Cmp(ver) < 0
 }
