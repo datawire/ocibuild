@@ -301,10 +301,16 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	}
 	//   d. Update ``distribution-1.0.dist-info/RECORD`` with the installed
 	//      paths.
+
 	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD"))
 	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD.jws"))
 	delete(vfs, path.Join(dstDir, distInfoDir, "RECORD.p7s"))
+	// Intentionally left "TODO"; the spec at
+	// https://packaging.python.org/en/latest/specifications/recording-installed-packages/
+	// (implemented as a PostInstallHook) overrides us.
+	//
 	//create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
+
 	//   e. Remove empty ``distribution-1.0.data`` directory.
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
