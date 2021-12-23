@@ -7,57 +7,12 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 )
-
-type version []int
-
-var specVersion = version{1, 0}
-
-func parseVersion(str string) (version, error) {
-	parts := strings.Split(str, ".")
-	ret := make(version, 0, len(parts))
-	for _, part := range parts {
-		n, err := strconv.Atoi(part)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse wheel version number: %q: %w", str, err)
-		}
-		ret = append(ret, n)
-	}
-	return ret, nil
-}
-
-func (v version) String() string {
-	parts := make([]string, 0, len(v))
-	for _, n := range v {
-		parts = append(parts, strconv.Itoa(n))
-	}
-	return strings.Join(parts, ".")
-}
-
-func vercmp(a, b version) int {
-	for i := 0; i < len(a) || i < len(b); i++ {
-		aPart := 0
-		if i < len(a) {
-			aPart = a[i]
-		}
-
-		bPart := 0
-		if i < len(b) {
-			bPart = b[i]
-		}
-
-		if aPart != bPart {
-			return aPart - bPart
-		}
-	}
-	return 0
-}
 
 func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
 	if err := plat.Init(); err != nil {

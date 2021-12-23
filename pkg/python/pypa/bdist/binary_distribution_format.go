@@ -182,6 +182,9 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 //
 // This PEP was accepted, and the defined wheel version updated to 1.0, by
 // Nick Coghlan on 16th February, 2013 [1]_
+
+var specVersion, _ = pep440.ParseVersion("1.0")
+
 //
 //
 // Rationale
@@ -221,14 +224,14 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	}
 	//   b. Check that installer is compatible with Wheel-Version.  Warn if
 	//      minor version is greater, abort if major version is greater.
-	wheelVersion, err := parseVersion(metadata.Get("Wheel-Version"))
+	wheelVersion, err := pep440.ParseVersion(metadata.Get("Wheel-Version"))
 	if err != nil {
 		return nil, "", fmt.Errorf("parse Wheel-Version: %w", err)
 	}
-	if wheelVersion[0] > specVersion[0] {
+	if wheelVersion.Major() > specVersion.Major() {
 		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
 	}
-	if vercmp(wheelVersion, specVersion) > 0 {
+	if wheelVersion.Cmp(*specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
 	}
 	//   c. If Root-Is-Purelib == 'true', unpack archive into purelib
