@@ -397,7 +397,14 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		externalAttrs.UNIX = externalAttrs.UNIX | 0111
 		entry.header.ExternalAttrs = externalAttrs.Raw()
 
-		vfs[filename] = entry
+		// Arrange for RECORD to contain the pre-rewritten hash and size.
+		// https://github.com/pypa/pip/issues/10744
+		hash, size, err := genRecord(originalOpen)
+		vfs[filename] = &withRecord{
+			FileReference: entry,
+			RecordHash: hash,
+			RecordSize: size,
+		}
 	}
 	return nil
 }
