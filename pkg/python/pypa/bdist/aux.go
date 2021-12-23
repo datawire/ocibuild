@@ -118,8 +118,10 @@ func (wh *wheel) distInfoDir() (string, error) {
 	}
 }
 
-// vfs is a map[filename]FileReference where filename==FileReference.FullName() and filenames use
-// forward slashes and are absolute paths but without the leading "/" (same as io/fs).
+// vfs is a map[filename]FileReference where filename==FileReference.FullName().
+//
+// As a reminder, FileFeference.FullName() returns io/fs paths: (1) forward-slashes and (2) absolute
+// paths but without the leading "/".
 type PostInstallHook func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
 
 func PostInstallHooks(hooks ...PostInstallHook) PostInstallHook {

@@ -15,7 +15,11 @@ import (
 
 type FileReference interface {
 	fs.FileInfo
+
+	// FullName should follow io/fs rules: it should use forward-slashes, and it should be an
+	// absolute path but without the leading "/".
 	FullName() string
+
 	Open() (io.ReadCloser, error)
 }
 
