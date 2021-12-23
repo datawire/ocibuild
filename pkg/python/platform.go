@@ -2,7 +2,7 @@ package python
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 )
 
 type Platform struct {
@@ -50,7 +50,7 @@ func (plat *Platform) Init() error {
 		{"scripts", plat.Scheme.Scripts},
 		{"data", plat.Scheme.Data},
 	} {
-		if !path.IsAbs(pair.val) {
+		if !filepath.IsAbs(pair.val) {
 			return fmt.Errorf("Platform install scheme %q is not an absolute path: %q", pair.name, pair.val)
 		}
 	}

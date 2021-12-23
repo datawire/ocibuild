@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -62,6 +63,7 @@ func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
 	if err := plat.Init(); err != nil {
 		return plat, err
 	}
+	// transform the paths from `path/filepath` paths to `io/fs` paths.
 	paths := []*string{
 		&plat.Scheme.PureLib,
 		&plat.Scheme.PlatLib,
@@ -70,9 +72,10 @@ func sanitizePlatformForLayer(plat python.Platform) (python.Platform, error) {
 		&plat.Scheme.Data,
 	}
 	for _, pathPtr := range paths {
-		clean := (*pathPtr)[1:]
+		clean := strings.TrimPrefix(filepath.ToSlash(*pathPtr), "/")
 		*pathPtr = clean
 	}
+
 	return plat, nil
 }
 
