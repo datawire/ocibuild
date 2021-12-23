@@ -7,6 +7,7 @@ linters:
     - gocritic
     - gofmt
     - gofumpt
+    - misspell
     - nolintlint
     - unused
 linters-settings:
@@ -27,6 +28,8 @@ linters-settings:
     extra-rules: true
   goimports:
     local-prefixes: github.com/datawire/ocibuild
+  misspell:
+    locale: US
   nolintlint:
     allow-unused: false
     allow-leading-space: false
@@ -34,6 +37,13 @@ linters-settings:
     require-specific: true
 issues:
   exclude-rules:
+    ## Exceptions for specifications ################################
+
+    - # Allow PEPs to use a few UK-isms
+      linters: [misspell]
+      path: '^pkg/python/(pep|pypa/)'
+      text: '`(behaviours?|standardised)` is a misspelling'
+
     ## Exceptions for borrowed code #################################
 
     - # Don't be too nitpicky on borrowed code

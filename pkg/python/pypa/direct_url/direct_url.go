@@ -1,5 +1,5 @@
-// Package direct_url implementes the PyPA specification Recording the Direct URL Origin of
-// installed distributions (AKA PEP 610).
+// Package direct_url implements the PyPA specification Recording the Direct URL Origin of installed
+// distributions (AKA PEP 610).
 //
 // https://packaging.python.org/en/latest/specifications/direct-url/
 package direct_url
