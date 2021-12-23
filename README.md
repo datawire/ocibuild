@@ -1,6 +1,6 @@
 # ocibuild
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/datawire/ocibuild)](https://pkg.go.dev/github.com/datawire/ocibuild)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/datawire/ocibuild)](https://pkg.go.dev/github.com/datawire/ocibuild/pkg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/datawire/ocibuild)](https://goreportcard.com/report/github.com/datawire/ocibuild)
 [![Quality Assurance](https://github.com/datawire/ocibuild/actions/workflows/qa.yml/badge.svg)](https://github.com/datawire/ocibuild/actions)
 
