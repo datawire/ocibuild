@@ -674,10 +674,7 @@ func parseVersion(str string) (*Version, error) {
 		return nil, fmt.Errorf("pre-release: %w", err)
 	}
 	if pre != nil {
-		ver.Pre = &struct {
-			L string
-			N int
-		}{
+		ver.Pre = &PreRelease{
 			L: pre.L,
 			N: pre.N,
 		}

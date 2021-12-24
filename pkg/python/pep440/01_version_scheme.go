@@ -63,14 +63,34 @@ type PublicVersion struct {
 	// * Release segment: ``N(.N)*``
 	Release []int
 	// * Pre-release segment: ``{a|b|rc}N``
-	Pre *struct {
-		L string
-		N int
-	}
+	Pre *PreRelease
 	// * Post-release segment: ``.postN``
 	Post *int
 	// * Development release segment: ``.devN``
 	Dev *int
+}
+
+type PreRelease struct {
+	L string
+	N int
+}
+
+// GoString implements fmt.GoStringer.
+func (ver PublicVersion) GoString() string {
+	pre := "nil"
+	if ver.Pre != nil {
+		pre = fmt.Sprintf("&%#v", *ver.Pre)
+	}
+	post := "nil"
+	if ver.Post != nil {
+		post = fmt.Sprintf("intPtr(%#v)", *ver.Post)
+	}
+	dev := "nil"
+	if ver.Dev != nil {
+		dev = fmt.Sprintf("intPtr(%#v)", *ver.Dev)
+	}
+	return fmt.Sprintf("pep440.PublicVersion{Epoch:%d, Release:%#v, Pre:%s, Post:%s, Dev:%s}",
+		ver.Epoch, ver.Release, pre, post, dev)
 }
 
 func (ver PublicVersion) writeTo(ret *strings.Builder) {
@@ -165,6 +185,12 @@ func (ver PublicVersion) String() string {
 type LocalVersion struct {
 	PublicVersion
 	Local []intstr.IntOrString
+}
+
+// GoString implements fmt.GoStringer.
+func (ver LocalVersion) GoString() string {
+	return fmt.Sprintf("pep440.LocalVersion{PublicVersion:%#v, Local:%#v}",
+		ver.PublicVersion, ver.Local)
 }
 
 // String implements fmt.Stringer.  String does not perform any normalization.
