@@ -35,9 +35,9 @@ func ParseVersionSpecifier(str string) (VersionSpecifier, error) {
 	return ret, nil
 }
 
-func (s VersionSpecifier) Match(v pep440.Version) bool {
-	for _, clause := range s {
-		if !clause.Match(v) {
+func (spec VersionSpecifier) Match(ver pep440.Version) bool {
+	for _, clause := range spec {
+		if !clause.Match(ver) {
 			return false
 		}
 	}
@@ -83,27 +83,27 @@ func parseVersionSpecifierClause(str string) (VersionSpecifierClause, error) {
 	return ret, nil
 }
 
-func (s VersionSpecifierClause) Match(v pep440.Version) bool {
-	if !v.IsFinal() {
+func (spec VersionSpecifierClause) Match(ver pep440.Version) bool {
+	if !ver.IsFinal() {
 		return false
 	}
-	if len(v.Release) < len(s.Version.Release) {
-		v.Release = v.Release[:len(s.Version.Release)]
+	if len(ver.Release) < len(spec.Version.Release) {
+		ver.Release = ver.Release[:len(spec.Version.Release)]
 	}
-	switch s.CmpOp {
+	switch spec.CmpOp {
 	case "<":
-		return s.Version.Cmp(v) < 0
+		return spec.Version.Cmp(ver) < 0
 	case "<=":
-		return s.Version.Cmp(v) <= 0
+		return spec.Version.Cmp(ver) <= 0
 	case ">":
-		return s.Version.Cmp(v) > 0
+		return spec.Version.Cmp(ver) > 0
 	case ">=":
-		return s.Version.Cmp(v) >= 0
+		return spec.Version.Cmp(ver) >= 0
 	case "==":
-		return s.Version.Cmp(v) == 0
+		return spec.Version.Cmp(ver) == 0
 	case "!=":
-		return s.Version.Cmp(v) != 0
+		return spec.Version.Cmp(ver) != 0
 	default:
-		panic(fmt.Errorf("invalid CmpOp: %q", s.CmpOp))
+		panic(fmt.Errorf("invalid CmpOp: %q", spec.CmpOp))
 	}
 }

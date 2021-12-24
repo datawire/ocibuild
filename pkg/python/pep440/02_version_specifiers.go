@@ -55,17 +55,17 @@ func ParseSpecifier(str string) (Specifier, error) {
 	return ret, nil
 }
 
-func (s Specifier) String() string {
-	clauses := make([]string, 0, len(s))
-	for _, clause := range s {
+func (spec Specifier) String() string {
+	clauses := make([]string, 0, len(spec))
+	for _, clause := range spec {
 		clauses = append(clauses, clause.String())
 	}
 	return strings.Join(clauses, ",")
 }
 
-func (s Specifier) Match(v Version) bool {
-	for _, clause := range s {
-		if !clause.Match(v) {
+func (spec Specifier) Match(ver Version) bool {
+	for _, clause := range spec {
+		if !clause.Match(ver) {
 			return false
 		}
 	}
@@ -105,8 +105,8 @@ func (op CmpOp) String() string {
 	return str
 }
 
-func (op CmpOp) match(s, v Version) bool {
-	fn, ok := map[CmpOp]func(s, v Version) bool{
+func (op CmpOp) match(spec, ver Version) bool {
+	fn, ok := map[CmpOp]func(spec, ver Version) bool{
 		CmpOp_Compatible:    matchCompatible,
 		CmpOp_StrictMatch:   matchStrictMatch,
 		CmpOp_PrefixMatch:   matchPrefixMatch,
@@ -120,7 +120,7 @@ func (op CmpOp) match(s, v Version) bool {
 	if !ok {
 		panic(fmt.Errorf("invalid CmpOp: %d", op))
 	}
-	return fn(s, v)
+	return fn(spec, ver)
 }
 
 type SpecifierClause struct {
@@ -172,21 +172,21 @@ func parseSpecifierClause(str string) (SpecifierClause, error) {
 	case strings.HasPrefix(str, "==="):
 		return ret, fmt.Errorf("the === specifier is not supported; versions must be PEP 440 compliant")
 	}
-	v, err := ParseVersion(str)
+	ver, err := ParseVersion(str)
 	if err != nil {
 		return ret, err
 	}
-	if v.Dev != nil && !devOK {
+	if ver.Dev != nil && !devOK {
 		return ret, fmt.Errorf("dev-part not permitted in %s specifier clauses", ret.CmpOp)
 	}
-	if len(v.Local) > 0 && !localOK {
+	if len(ver.Local) > 0 && !localOK {
 		return ret, fmt.Errorf("local-part not permitted in %s specifier clauses", ret.CmpOp)
 	}
-	ret.Version = *v
+	ret.Version = *ver
 	return ret, nil
 }
 
-func (s SpecifierClause) String() string {
+func (spec SpecifierClause) String() string {
 	opStr, ok := map[CmpOp]string{
 		CmpOp_Compatible:    "~=",
 		CmpOp_StrictMatch:   "==",
@@ -197,15 +197,15 @@ func (s SpecifierClause) String() string {
 		CmpOp_GE:            ">=",
 		CmpOp_LT:            "<",
 		CmpOp_GT:            ">",
-	}[s.CmpOp]
+	}[spec.CmpOp]
 	if !ok {
-		panic(fmt.Errorf("invalid CmpOp: %d", s.CmpOp))
+		panic(fmt.Errorf("invalid CmpOp: %d", spec.CmpOp))
 	}
-	return opStr + s.Version.String()
+	return opStr + spec.Version.String()
 }
 
-func (s SpecifierClause) Match(v Version) bool {
-	return s.CmpOp.match(s.Version, v)
+func (spec SpecifierClause) Match(ver Version) bool {
+	return spec.CmpOp.match(spec.Version, ver)
 }
 
 //
@@ -257,12 +257,12 @@ func (s SpecifierClause) Match(v Version) bool {
 //
 //     ~= 1.4.5.0
 //     >= 1.4.5.0, == 1.4.5.*
-func matchCompatible(s, v Version) bool {
-	prefix := s
+func matchCompatible(spec, ver Version) bool {
+	prefix := spec
 	prefix.Pre = nil
 	prefix.Post = nil
 	prefix.Dev = nil
-	return matchGE(s, v) && matchPrefixMatch(prefix, v)
+	return matchGE(spec, ver) && matchPrefixMatch(prefix, ver)
 }
 
 //
@@ -345,14 +345,14 @@ func matchCompatible(s, v Version) bool {
 // versions, with the public version identifier being matched as described
 // above, and the local version label being checked for equivalence using a
 // strict string equality comparison.
-func matchStrictMatch(s, v Version) bool {
-	if len(s.Local) == 0 {
-		return s.PublicVersion.Cmp(v.PublicVersion) == 0
+func matchStrictMatch(spec, ver Version) bool {
+	if len(spec.Local) == 0 {
+		return spec.PublicVersion.Cmp(ver.PublicVersion) == 0
 	}
-	return s.Cmp(v) == 0
+	return spec.Cmp(ver) == 0
 }
-func matchPrefixMatch(_s, _v Version) bool {
-	s, v := _s.PublicVersion, _v.PublicVersion
+func matchPrefixMatch(_spec, _ver Version) bool {
+	spec, ver := _spec.PublicVersion, _ver.PublicVersion
 	const (
 		partRel = iota
 		partPre
@@ -360,22 +360,22 @@ func matchPrefixMatch(_s, _v Version) bool {
 	)
 	var part int
 	switch {
-	case s.Post != nil:
+	case spec.Post != nil:
 		part = partPost
-	case s.Pre != nil:
+	case spec.Pre != nil:
 		part = partPre
 	default:
 		part = partRel
 	}
 
-	if cmpEpoch(s, v) != 0 {
+	if cmpEpoch(spec, ver) != 0 {
 		return false
 	}
 
 	if part == partRel {
-		return cmpRelease(s, v) <= 0
+		return cmpRelease(spec, ver) <= 0
 	}
-	if cmpRelease(s, v) != 0 {
+	if cmpRelease(spec, ver) != 0 {
 		return false
 	}
 
@@ -392,14 +392,14 @@ func matchPrefixMatch(_s, _v Version) bool {
 			"pre":     -1,
 			"preview": -1,
 		}
-		return v.Pre != nil && order[s.Pre.L] == order[v.Pre.L]
+		return ver.Pre != nil && order[spec.Pre.L] == order[ver.Pre.L]
 	}
-	if cmpPreRelease(s, v) != 0 {
+	if cmpPreRelease(spec, ver) != 0 {
 		return false
 	}
 
 	if part == partPost {
-		return v.Post != nil
+		return ver.Post != nil
 	}
 	panic("not reached")
 }
@@ -423,11 +423,11 @@ func matchPrefixMatch(_s, _v Version) bool {
 //     != 1.1        # Not equal, so 1.1.post1 matches clause
 //     != 1.1.post1  # Equal, so 1.1.post1 does not match clause
 //     != 1.1.*      # Same prefix, so 1.1.post1 does not match clause
-func matchStrictExclude(s, v Version) bool {
-	return !matchStrictMatch(s, v)
+func matchStrictExclude(spec, ver Version) bool {
+	return !matchStrictMatch(spec, ver)
 }
-func matchPrefixExclude(s, v Version) bool {
-	return !matchPrefixMatch(s, v)
+func matchPrefixExclude(spec, ver Version) bool {
+	return !matchPrefixMatch(spec, ver)
 }
 
 //
@@ -447,11 +447,11 @@ func matchPrefixExclude(s, v Version) bool {
 // ensure the release segments are compared with the same length.
 //
 // Local version identifiers are NOT permitted in this version specifier.
-func matchLE(s, v Version) bool {
-	return s.Cmp(v) >= 0
+func matchLE(spec, ver Version) bool {
+	return spec.Cmp(ver) >= 0
 }
-func matchGE(s, v Version) bool {
-	return s.Cmp(v) <= 0
+func matchGE(spec, ver Version) bool {
+	return spec.Cmp(ver) <= 0
 }
 
 //
@@ -484,11 +484,11 @@ func matchGE(s, v Version) bool {
 // ensure the release segments are compared with the same length.
 //
 // Local version identifiers are NOT permitted in this version specifier.
-func matchLT(s, v Version) bool {
-	return s.Cmp(v) > 0
+func matchLT(spec, ver Version) bool {
+	return spec.Cmp(ver) > 0
 }
-func matchGT(s, v Version) bool {
-	return s.Cmp(v) < 0
+func matchGT(spec, ver Version) bool {
+	return spec.Cmp(ver) < 0
 }
 
 //
@@ -550,7 +550,7 @@ func matchGT(s, v Version) bool {
 // specifiers - they are always included unless explicitly excluded.
 
 type ExclusionBehavior interface {
-	Allow(v Version) bool
+	Allow(Version) bool
 }
 
 // AllowAll is an implementation of ExclusionBehavior.
@@ -565,12 +565,12 @@ type ExcludePreReleases struct {
 	AllowList []Version
 }
 
-func (prereleases ExcludePreReleases) Allow(v Version) bool {
-	if !v.IsPreRelease() {
+func (prereleases ExcludePreReleases) Allow(ver Version) bool {
+	if !ver.IsPreRelease() {
 		return true
 	}
 	for _, item := range prereleases.AllowList {
-		if item.Cmp(v) == 0 {
+		if item.Cmp(ver) == 0 {
 			return true
 		}
 	}
@@ -581,29 +581,29 @@ func (prereleases ExcludePreReleases) Allow(v Version) bool {
 // ExclusionBehaviors together; anly allowing a version if all of the behaviors allow it.
 type MultiExcluder []ExclusionBehavior
 
-func (m MultiExcluder) Allow(v Version) bool {
+func (m MultiExcluder) Allow(ver Version) bool {
 	for _, e := range m {
-		if !e.Allow(v) {
+		if !e.Allow(ver) {
 			return false
 		}
 	}
 	return true
 }
 
-func (s Specifier) Select(choices []Version, exclusionBehavior ExclusionBehavior) *Version {
+func (spec Specifier) Select(choices []Version, exclusionBehavior ExclusionBehavior) *Version {
 	var best *Version
 	var bestExcluded *Version
 	for _, choice := range choices {
-		if s.Match(choice) {
+		if spec.Match(choice) {
 			if exclusionBehavior == nil || !exclusionBehavior.Allow(choice) {
 				if best == nil || best.Cmp(choice) < 0 {
-					v := choice
-					best = &v
+					val := choice
+					best = &val
 				}
 			} else {
 				if bestExcluded == nil || bestExcluded.Cmp(choice) < 0 {
-					v := choice
-					bestExcluded = &v
+					val := choice
+					bestExcluded = &val
 				}
 			}
 		}

@@ -165,14 +165,14 @@ func TestNormalize(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			t.Parallel()
 			t.Logf("input: %q", tcData.Input)
-			v, err := pep440.ParseVersion(tcData.Input)
+			ver, err := pep440.ParseVersion(tcData.Input)
 			if tcData.Normalized == "" {
 				assert.Error(t, err)
-				assert.Nil(t, v)
+				assert.Nil(t, ver)
 			} else {
 				assert.NoError(t, err)
-				require.NotNil(t, v)
-				assert.Equal(t, tcData.Normalized, v.String())
+				require.NotNil(t, ver)
+				assert.Equal(t, tcData.Normalized, ver.String())
 			}
 		})
 	}

@@ -46,11 +46,11 @@ type Version = LocalVersion
 
 // ParseVersion parses a string to a Version object, performing normalization.
 func ParseVersion(str string) (*Version, error) {
-	v, err := parseVersion(str) // the routine from Appendix B
+	ver, err := parseVersion(str) // the routine from Appendix B
 	if err != nil {
 		return nil, fmt.Errorf("pep440.ParseVersion: %w", err)
 	}
-	return v, nil
+	return ver, nil
 }
 
 //
@@ -73,29 +73,29 @@ type PublicVersion struct {
 	Dev *int
 }
 
-func (v PublicVersion) writeTo(ret *strings.Builder) {
-	if v.Epoch > 0 {
-		fmt.Fprintf(ret, "%d!", v.Epoch)
+func (ver PublicVersion) writeTo(ret *strings.Builder) {
+	if ver.Epoch > 0 {
+		fmt.Fprintf(ret, "%d!", ver.Epoch)
 	}
-	fmt.Fprintf(ret, "%d", v.Release[0])
-	for _, segment := range v.Release[1:] {
+	fmt.Fprintf(ret, "%d", ver.Release[0])
+	for _, segment := range ver.Release[1:] {
 		fmt.Fprintf(ret, ".%d", segment)
 	}
-	if v.Pre != nil {
-		fmt.Fprintf(ret, "%s%d", v.Pre.L, v.Pre.N)
+	if ver.Pre != nil {
+		fmt.Fprintf(ret, "%s%d", ver.Pre.L, ver.Pre.N)
 	}
-	if v.Post != nil {
-		fmt.Fprintf(ret, ".post%d", *v.Post)
+	if ver.Post != nil {
+		fmt.Fprintf(ret, ".post%d", *ver.Post)
 	}
-	if v.Dev != nil {
-		fmt.Fprintf(ret, ".dev%d", *v.Dev)
+	if ver.Dev != nil {
+		fmt.Fprintf(ret, ".dev%d", *ver.Dev)
 	}
 }
 
 // String implements fmt.Stringer.  String does not perform any normalization.
-func (v PublicVersion) String() string {
+func (ver PublicVersion) String() string {
 	var ret strings.Builder
-	v.writeTo(&ret)
+	ver.writeTo(&ret)
 	return ret.String()
 }
 
@@ -168,11 +168,11 @@ type LocalVersion struct {
 }
 
 // String implements fmt.Stringer.  String does not perform any normalization.
-func (v LocalVersion) String() string {
+func (ver LocalVersion) String() string {
 	var ret strings.Builder
-	v.PublicVersion.writeTo(&ret)
+	ver.PublicVersion.writeTo(&ret)
 	sep := "+"
-	for _, local := range v.Local {
+	for _, local := range ver.Local {
 		ret.WriteString(sep)
 		ret.WriteString(local.String())
 		sep = "."
@@ -272,12 +272,12 @@ func (a LocalVersion) Cmp(b LocalVersion) int {
 // A version identifier that consists solely of a release segment and optionally
 // an epoch identifier is termed a "final release".
 
-func (v PublicVersion) IsFinal() bool {
-	return v.Pre == nil && v.Post == nil && v.Dev == nil
+func (ver PublicVersion) IsFinal() bool {
+	return ver.Pre == nil && ver.Post == nil && ver.Dev == nil
 }
 
-func (v LocalVersion) IsFinal() bool {
-	return v.PublicVersion.IsFinal() && len(v.Local) == 0
+func (ver LocalVersion) IsFinal() bool {
+	return ver.PublicVersion.IsFinal() && len(ver.Local) == 0
 }
 
 //
@@ -295,9 +295,9 @@ func (v LocalVersion) IsFinal() bool {
 // segments with different numbers of components, the shorter segment is
 // padded out with additional zeros as necessary.
 
-func (v PublicVersion) releaseSegment(n int) int {
-	if n < len(v.Release) {
-		return v.Release[n]
+func (ver PublicVersion) releaseSegment(n int) int {
+	if n < len(ver.Release) {
+		return ver.Release[n]
 	}
 	return 0
 }
@@ -316,9 +316,9 @@ func cmpRelease(a, b PublicVersion) int {
 // under this scheme, the most common variants are to use two components
 // ("major.minor") or three components ("major.minor.micro").
 
-func (v PublicVersion) Major() int { return v.releaseSegment(0) }
-func (v PublicVersion) Minor() int { return v.releaseSegment(1) }
-func (v PublicVersion) Micro() int { return v.releaseSegment(2) }
+func (ver PublicVersion) Major() int { return ver.releaseSegment(0) }
+func (ver PublicVersion) Minor() int { return ver.releaseSegment(1) }
+func (ver PublicVersion) Micro() int { return ver.releaseSegment(2) }
 
 //
 // For example::
@@ -532,8 +532,8 @@ func cmpPostRelease(a, b PublicVersion) int {
 //
 //
 
-func (v PublicVersion) IsPreRelease() bool {
-	return v.Pre != nil || v.Dev != nil
+func (ver PublicVersion) IsPreRelease() bool {
+	return ver.Pre != nil || ver.Dev != nil
 }
 
 func cmpDevRelease(a, b PublicVersion) int {
@@ -596,16 +596,16 @@ func cmpEpoch(a, b PublicVersion) int {
 // versions. These syntaxes MUST be considered when parsing a version, however
 // they should be "normalized" to the standard syntax defined above.
 
-func (v PublicVersion) Normalize() (*PublicVersion, error) {
-	n, err := ParseVersion(v.String())
+func (ver PublicVersion) Normalize() (*PublicVersion, error) {
+	n, err := ParseVersion(ver.String())
 	if err != nil {
 		return nil, err
 	}
 	return &n.PublicVersion, nil
 }
 
-func (v LocalVersion) Normalize() (*LocalVersion, error) {
-	n, err := ParseVersion(v.String())
+func (ver LocalVersion) Normalize() (*LocalVersion, error) {
+	n, err := ParseVersion(ver.String())
 	if err != nil {
 		return nil, err
 	}
