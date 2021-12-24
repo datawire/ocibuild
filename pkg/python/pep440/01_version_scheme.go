@@ -97,6 +97,9 @@ func (ver PublicVersion) writeTo(ret *strings.Builder) {
 	if ver.Epoch > 0 {
 		fmt.Fprintf(ret, "%d!", ver.Epoch)
 	}
+	if len(ver.Release) == 0 {
+		panic("invalid version: no release segments")
+	}
 	fmt.Fprintf(ret, "%d", ver.Release[0])
 	for _, segment := range ver.Release[1:] {
 		fmt.Fprintf(ret, ".%d", segment)
@@ -221,7 +224,7 @@ func cmpLocalSegment(a, b *intstr.IntOrString) int {
 	// handle one or both of them being nil
 	switch {
 	case a == nil && b == nil:
-		return 0
+		panic("should not happen: cmpLocal shouldn't have bothered calling this")
 	case a == nil && b != nil:
 		return -1
 	case a != nil && b == nil:
@@ -238,10 +241,12 @@ func cmpLocalSegment(a, b *intstr.IntOrString) int {
 			return 1
 		}
 		return 0
-	case a.Type == intstr.Int:
+	case a.Type == intstr.Int && b.Type == intstr.String:
 		return 1
-	default:
+	case a.Type == intstr.String && b.Type == intstr.Int:
 		return -1
+	default:
+		panic("should not happen: invalid intstr.IntOrString")
 	}
 }
 
@@ -417,25 +422,26 @@ func (ver PublicVersion) Micro() int { return ver.releaseSegment(2) }
 //
 //
 
+var preReleaseOrder = map[string]int{
+	"a":     -3,
+	"alpha": -3,
+
+	"b":    -2,
+	"beta": -2,
+
+	"rc":      -1,
+	"c":       -1,
+	"pre":     -1,
+	"preview": -1,
+
+	// absent: 0,
+}
+
 func cmpPreRelease(a, b PublicVersion) int {
-	order := map[string]int{
-		"a":     -3,
-		"alpha": -3,
-
-		"b":    -2,
-		"beta": -2,
-
-		"rc":      -1,
-		"c":       -1,
-		"pre":     -1,
-		"preview": -1,
-
-		// absent: 0,
-	}
 	var aL, aN, bL, bN int
 	var ok bool
 	if a.Pre != nil {
-		aL, ok = order[a.Pre.L]
+		aL, ok = preReleaseOrder[a.Pre.L]
 		if !ok {
 			panic(fmt.Errorf("invalid pre-release string: %q", a.Pre.L))
 		}
@@ -444,7 +450,7 @@ func cmpPreRelease(a, b PublicVersion) int {
 		aL = -4
 	}
 	if b.Pre != nil {
-		bL, ok = order[b.Pre.L]
+		bL, ok = preReleaseOrder[b.Pre.L]
 		if !ok {
 			panic(fmt.Errorf("invalid pre-release string: %q", b.Pre.L))
 		}

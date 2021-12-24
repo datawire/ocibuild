@@ -46,6 +46,10 @@ func ParseSpecifier(str string) (Specifier, error) {
 	clauseStrs := strings.FieldsFunc(str, func(r rune) bool { return r == ',' })
 	ret := make(Specifier, 0, len(clauseStrs))
 	for _, clauseStr := range clauseStrs {
+		clauseStr = strings.TrimSpace(clauseStr)
+		if clauseStr == "" {
+			continue
+		}
 		clause, err := parseSpecifierClause(clauseStr)
 		if err != nil {
 			return nil, fmt.Errorf("pep440.ParseSpecifier: %w", err)
@@ -85,6 +89,7 @@ const (
 	CmpOp_LT
 	CmpOp_GT
 	//CmpOp_Arbitrary
+	_CmpOp_End
 )
 
 func (op CmpOp) String() string {
@@ -131,12 +136,14 @@ type SpecifierClause struct {
 func parseSpecifierClause(str string) (SpecifierClause, error) {
 	var ret SpecifierClause
 	str = strings.TrimSpace(str)
+	minSegments := 1
 	devOK := true
 	localOK := false
 	switch {
 	case strings.HasPrefix(str, "~="):
 		ret.CmpOp = CmpOp_Compatible
 		str = str[2:]
+		minSegments = 2
 	case strings.HasPrefix(str, "==") && !strings.HasPrefix(str, "==="):
 		ret.CmpOp = CmpOp_StrictMatch
 		str = str[2:]
@@ -170,11 +177,17 @@ func parseSpecifierClause(str string) (SpecifierClause, error) {
 		ret.CmpOp = CmpOp_GT
 		str = str[2:]
 	case strings.HasPrefix(str, "==="):
-		return ret, fmt.Errorf("the === specifier is not supported; versions must be PEP 440 compliant")
+		return ret, fmt.Errorf("specifiers with === are not supported; versions must be PEP 440 compliant")
+	default:
+		return ret, fmt.Errorf("invalid comparison operator: %q", str)
 	}
 	ver, err := ParseVersion(str)
 	if err != nil {
 		return ret, err
+	}
+	if len(ver.Release) < minSegments {
+		return ret, fmt.Errorf("at least %d release segments required in %s specifier clauses",
+			minSegments, ret.CmpOp)
 	}
 	if ver.Dev != nil && !devOK {
 		return ret, fmt.Errorf("dev-part not permitted in %s specifier clauses", ret.CmpOp)
@@ -259,6 +272,7 @@ func (spec SpecifierClause) Match(ver Version) bool {
 //     >= 1.4.5.0, == 1.4.5.*
 func matchCompatible(spec, ver Version) bool {
 	prefix := spec
+	prefix.Release = prefix.Release[:len(prefix.Release)-1]
 	prefix.Pre = nil
 	prefix.Post = nil
 	prefix.Dev = nil
@@ -358,49 +372,61 @@ func matchPrefixMatch(_spec, _ver Version) bool {
 		partPre
 		partPost
 	)
-	var part int
+	// terminalPart identifies the terminal part of spec's version
+	var terminalPart int
 	switch {
 	case spec.Post != nil:
-		part = partPost
+		terminalPart = partPost
 	case spec.Pre != nil:
-		part = partPre
+		terminalPart = partPre
 	default:
-		part = partRel
+		terminalPart = partRel
 	}
+
+	// epoch /////////////////////////////////////////////////////
 
 	if cmpEpoch(spec, ver) != 0 {
 		return false
 	}
 
-	if part == partRel {
-		return cmpRelease(spec, ver) <= 0
+	// release ///////////////////////////////////////////////////
+
+	if terminalPart == partRel {
+		if len(ver.Release) > len(spec.Release) {
+			ver.Release = ver.Release[:len(spec.Release)]
+		}
 	}
 	if cmpRelease(spec, ver) != 0 {
 		return false
 	}
-
-	if part == partPre {
-		order := map[string]int{
-			"a":     -3,
-			"alpha": -3,
-
-			"b":    -2,
-			"beta": -2,
-
-			"rc":      -1,
-			"c":       -1,
-			"pre":     -1,
-			"preview": -1,
-		}
-		return ver.Pre != nil && order[spec.Pre.L] == order[ver.Pre.L]
+	if terminalPart == partRel {
+		return true // we're done
 	}
-	if cmpPreRelease(spec, ver) != 0 {
+
+	// pre-release ///////////////////////////////////////////////
+
+	// Do this here instead of using cmpPreRelease because cmpPreRelease also takes in to
+	// account .Post and .Dev.
+	if (ver.Pre == nil) != (spec.Pre == nil) {
+		return false
+	} else if spec.Pre != nil && (preReleaseOrder[ver.Pre.L] != preReleaseOrder[spec.Pre.L] || ver.Pre.N != spec.Pre.N) {
 		return false
 	}
-
-	if part == partPost {
-		return ver.Post != nil
+	if terminalPart == partPre {
+		return true // we're done
 	}
+
+	// post-release //////////////////////////////////////////////
+
+	if cmpPostRelease(spec, ver) != 0 {
+		return false
+	}
+	if terminalPart == partPost {
+		return true // we're done
+	}
+
+	// developmental release /////////////////////////////////////
+
 	panic("not reached")
 }
 
