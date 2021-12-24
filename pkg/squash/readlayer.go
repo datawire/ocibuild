@@ -25,7 +25,7 @@ type layerFS struct {
 //
 //  - Paths always path.Clean()'d (notably, directories do NOT contain trailing "/").
 func parseLayer(layer ociv1.Layer) (*layerFS, error) {
-	fs := &layerFS{}
+	lfs := &layerFS{}
 	layerReader, err := layer.Uncompressed()
 	if err != nil {
 		return nil, fmt.Errorf("reading layer contents: %w", err)
@@ -56,10 +56,10 @@ func parseLayer(layer ociv1.Layer) (*layerFS, error) {
 			Body:   body,
 		}
 		if strings.HasPrefix(path.Base(header.Name), ".wh.") {
-			fs.WhiteoutMarkers = append(fs.WhiteoutMarkers, entry)
+			lfs.WhiteoutMarkers = append(lfs.WhiteoutMarkers, entry)
 		} else {
-			fs.Files = append(fs.Files, entry)
+			lfs.Files = append(lfs.Files, entry)
 		}
 	}
-	return fs, nil
+	return lfs, nil
 }

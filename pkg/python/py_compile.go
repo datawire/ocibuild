@@ -22,7 +22,7 @@ import (
 // source files can refer to eachother.
 //
 // The returned output does *not* include directories.  The ordering of the output is undefined.
-type Compiler func(ctx context.Context, clampTime time.Time, pythonPath []string, in []fsutil.FileReference) ([]fsutil.FileReference, error)
+type Compiler func(ctx context.Context, clampTime time.Time, pythonPath []string, inFiles []fsutil.FileReference) ([]fsutil.FileReference, error)
 
 // ExternalCompiler returns a `Compiler` that uses an external command to compile .py files to .pyc
 // files.  It is designed for use with Python's "compileall" module.  It makes use of the "-p" flag
@@ -40,7 +40,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(ctx context.Context, clampTime time.Time, pythonPath []string, in []fsutil.FileReference) (_ []fsutil.FileReference, err error) {
+	return func(ctx context.Context, clampTime time.Time, pythonPath []string, inFiles []fsutil.FileReference) (_ []fsutil.FileReference, err error) {
 		maybeSetErr := func(_err error) {
 			if _err != nil && err == nil {
 				err = _err
@@ -108,7 +108,7 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 			return nil
 		}
 
-		for _, inFile := range in {
+		for _, inFile := range inFiles {
 			if err := writeFile(inFile); err != nil {
 				return nil, err
 			}
@@ -149,32 +149,24 @@ func ExternalCompiler(cmdline ...string) (Compiler, error) {
 		// filepath.Walk so that we don't need to worry about converting between forward and
 		// backward slashes.
 		dirFS := os.DirFS(tmpdir)
-		err = fs.WalkDir(dirFS, ".", func(p string, d fs.DirEntry, e error) error {
+		err = fs.WalkDir(dirFS, ".", func(fullname string, dirent fs.DirEntry, e error) error {
 			if e != nil {
 				return e
 			}
-			if d.IsDir() || !strings.HasSuffix(p, ".pyc") {
+			if dirent.IsDir() || !strings.HasSuffix(fullname, ".pyc") {
 				return nil
 			}
-			info, err := d.Info()
+			info, err := dirent.Info()
 			if err != nil {
 				return err
 			}
-			var content []byte
-			fh, err := dirFS.Open(p)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = fh.Close()
-			}()
-			content, err = io.ReadAll(fh)
+			content, err := fs.ReadFile(dirFS, fullname)
 			if err != nil {
 				return err
 			}
 			ret = append(ret, &fsutil.InMemFileReference{
 				FileInfo:  info,
-				MFullName: p,
+				MFullName: fullname,
 				MContent:  content,
 			})
 			return nil

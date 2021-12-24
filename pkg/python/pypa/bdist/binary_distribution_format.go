@@ -97,7 +97,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 	}
 	defer zipReader.Close()
 
-	wh := &wheel{
+	wh := &wheel{ //nolint:varnamelen // same as receiver name
 		zip: &zipReader.Reader,
 	}
 
@@ -500,33 +500,33 @@ var reFilename = regexp.MustCompile(regexp.MustCompile(`\s+`).ReplaceAllString(`
 		\.whl$`, ``))
 
 func ParseFilename(filename string) (*FileNameData, error) {
-	m := reFilename.FindStringSubmatch(filename)
-	if m == nil {
+	match := reFilename.FindStringSubmatch(filename)
+	if match == nil {
 		return nil, fmt.Errorf("invalid wheel filename: %q", filename)
 	}
 
 	var ret FileNameData
 
-	ret.Distribution = m[reFilename.SubexpIndex("distribution")]
+	ret.Distribution = match[reFilename.SubexpIndex("distribution")]
 
-	ver, err := pep440.ParseVersion(m[reFilename.SubexpIndex("version")])
+	ver, err := pep440.ParseVersion(match[reFilename.SubexpIndex("version")])
 	if err != nil {
 		return nil, fmt.Errorf("invalid wheel filename: %q: %w", filename, err)
 	}
 	ret.Version = *ver
 
-	if buildN := m[reFilename.SubexpIndex("build_n")]; buildN != "" {
+	if buildN := match[reFilename.SubexpIndex("build_n")]; buildN != "" {
 		n, _ := strconv.Atoi(buildN)
 		ret.BuildTag = &BuildTag{
 			Int: n,
-			Str: m[reFilename.SubexpIndex("build_l")],
+			Str: match[reFilename.SubexpIndex("build_l")],
 		}
 	}
 
 	ret.CompatibilityTag = pep425.Tag{
-		Python:   m[reFilename.SubexpIndex("python")],
-		ABI:      m[reFilename.SubexpIndex("abi")],
-		Platform: m[reFilename.SubexpIndex("platform")],
+		Python:   match[reFilename.SubexpIndex("python")],
+		ABI:      match[reFilename.SubexpIndex("abi")],
+		Platform: match[reFilename.SubexpIndex("platform")],
 	}
 
 	return &ret, nil

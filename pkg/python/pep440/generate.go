@@ -16,14 +16,14 @@ func randSeg(rand *rand.Rand) int {
 	return rand.Intn(3000)
 }
 
-func bound(low, n, high int) int {
-	if n < low {
-		n = low
+func bound(low, val, high int) int {
+	if val < low {
+		val = low
 	}
-	if n > high {
-		n = high
+	if val > high {
+		val = high
 	}
-	return n
+	return val
 }
 
 func (ver PublicVersion) generate(rand *rand.Rand, size int) PublicVersion {

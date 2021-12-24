@@ -55,92 +55,92 @@ const (
 	ModePermOthX StatMode = 0o00_0001 // permission: other: execute
 )
 
-// ToGo translates pm from a Statmode to an fs.FileMode.
-func (pm StatMode) ToGo() fs.FileMode {
+// ToGo translates pyMode from a Statmode to an fs.FileMode.
+func (pyMode StatMode) ToGo() fs.FileMode {
 	// permissions: base
-	gm := fs.FileMode(pm & 0o777)
+	goMode := fs.FileMode(pyMode & 0o777)
 
 	// permissions: extended
-	if pm&ModePermSetGID != 0 {
-		gm |= fs.ModeSetgid
+	if pyMode&ModePermSetGID != 0 {
+		goMode |= fs.ModeSetgid
 	}
-	if pm&ModePermSetUID != 0 {
-		gm |= fs.ModeSetuid
+	if pyMode&ModePermSetUID != 0 {
+		goMode |= fs.ModeSetuid
 	}
-	if pm&ModePermSticky != 0 {
-		gm |= fs.ModeSticky
+	if pyMode&ModePermSticky != 0 {
+		goMode |= fs.ModeSticky
 	}
 
 	// type
-	switch pm & ModeFmt {
+	switch pyMode & ModeFmt {
 	case ModeFmtBlockDevice:
-		gm |= fs.ModeDevice
+		goMode |= fs.ModeDevice
 	case ModeFmtCharDevice:
-		gm |= fs.ModeDevice | fs.ModeCharDevice
+		goMode |= fs.ModeDevice | fs.ModeCharDevice
 	case ModeFmtDir:
-		gm |= fs.ModeDir
+		goMode |= fs.ModeDir
 	case ModeFmtNamedPipe:
-		gm |= fs.ModeNamedPipe
+		goMode |= fs.ModeNamedPipe
 	case ModeFmtSymlink:
-		gm |= fs.ModeSymlink
+		goMode |= fs.ModeSymlink
 	case ModeFmtRegular:
 		// nothing to do
 	case ModeFmtSocket:
-		gm |= fs.ModeSocket
+		goMode |= fs.ModeSocket
 	}
 
-	return gm
+	return goMode
 }
 
 // ModeFromGo translates an fs.FileMode to a StatMode.
-func ModeFromGo(gm fs.FileMode) StatMode {
+func ModeFromGo(goMode fs.FileMode) StatMode {
 	// permissions: base
-	pm := StatMode(gm & 0o777)
+	pyMode := StatMode(goMode & 0o777)
 
 	// permissions: extended
-	if gm&fs.ModeSetgid != 0 {
-		pm |= ModePermSetGID
+	if goMode&fs.ModeSetgid != 0 {
+		pyMode |= ModePermSetGID
 	}
-	if gm&fs.ModeSetuid != 0 {
-		pm |= ModePermSetUID
+	if goMode&fs.ModeSetuid != 0 {
+		pyMode |= ModePermSetUID
 	}
-	if gm&fs.ModeSticky != 0 {
-		pm |= ModePermSticky
+	if goMode&fs.ModeSticky != 0 {
+		pyMode |= ModePermSticky
 	}
 
 	// type
-	switch gm & fs.ModeType {
+	switch goMode & fs.ModeType {
 	case fs.ModeDevice:
-		pm |= ModeFmtBlockDevice
+		pyMode |= ModeFmtBlockDevice
 	case fs.ModeDevice | fs.ModeCharDevice:
-		pm |= ModeFmtCharDevice
+		pyMode |= ModeFmtCharDevice
 	case fs.ModeDir:
-		pm |= ModeFmtDir
+		pyMode |= ModeFmtDir
 	case fs.ModeNamedPipe:
-		pm |= ModeFmtNamedPipe
+		pyMode |= ModeFmtNamedPipe
 	case fs.ModeSymlink:
-		pm |= ModeFmtSymlink
+		pyMode |= ModeFmtSymlink
 	case 0:
-		pm |= ModeFmtRegular
+		pyMode |= ModeFmtRegular
 	case fs.ModeSocket:
-		pm |= ModeFmtSocket
+		pyMode |= ModeFmtSocket
 	}
 
-	return pm
+	return pyMode
 }
 
-// IsDir reports whether pm describes a directory.
+// IsDir reports whether pyMode describes a directory.
 //
 // That is, it tests that the ModeFmt bits are set to ModeFmtDir.
-func (pm StatMode) IsDir() bool {
-	return pm&ModeFmt == ModeFmtDir
+func (pyMode StatMode) IsDir() bool {
+	return pyMode&ModeFmt == ModeFmtDir
 }
 
 // IsRegular reports whether m describes a regular file.
 //
 // That is, it tests that the ModeFmt bits are set to ModeFmtRegular.
-func (pm StatMode) IsRegular() bool {
-	return pm&ModeFmt == ModeFmtRegular
+func (pyMode StatMode) IsRegular() bool {
+	return pyMode&ModeFmt == ModeFmtRegular
 }
 
 // String returns a textual representation of the mode.
@@ -150,27 +150,27 @@ func (pm StatMode) IsRegular() bool {
 // method uses 's' (both Python `stat.filemode()` behavior and GNU `ls` behavior; though POSIX notes
 // that many implementations use '=' for sockets).  POSIX does not specify the character to use to
 // indicate a ModeFmtWhiteout file; the method uses 'w' (the behavior of Pyton `stat.filemode()`).
-func (pm StatMode) String() string {
+func (pyMode StatMode) String() string {
 	buf := [10]byte{
 		// type: This string is easy; it directly pairs with the above ModeFmtXXX list
 		// above; the character in the string left-to-right corresponds with the constant in
 		// the list top-to-bottom.
-		"?pc?d?b?-?l?s?w?"[pm>>12],
+		"?pc?d?b?-?l?s?w?"[pyMode>>12],
 
 		// owner
-		"-r"[(pm>>8)&0o1],
-		"-w"[(pm>>7)&0o1],
-		"-xSs"[((pm>>6)&0o1)|((pm>>10)&0o2)],
+		"-r"[(pyMode>>8)&0o1],
+		"-w"[(pyMode>>7)&0o1],
+		"-xSs"[((pyMode>>6)&0o1)|((pyMode>>10)&0o2)],
 
 		// group
-		"-r"[(pm>>5)&0o1],
-		"-w"[(pm>>4)&0o1],
-		"-xSs"[((pm>>3)&0o1)|((pm>>9)&0o2)],
+		"-r"[(pyMode>>5)&0o1],
+		"-w"[(pyMode>>4)&0o1],
+		"-xSs"[((pyMode>>3)&0o1)|((pyMode>>9)&0o2)],
 
 		// group
-		"-r"[(pm>>2)&0o1],
-		"-w"[(pm>>1)&0o1],
-		"-xTt"[((pm>>0)&0o1)|((pm>>8)&0o2)],
+		"-r"[(pyMode>>2)&0o1],
+		"-w"[(pyMode>>1)&0o1],
+		"-xTt"[((pyMode>>0)&0o1)|((pyMode>>8)&0o2)],
 	}
 
 	return string(buf[:])

@@ -141,17 +141,17 @@ func DumpLayerListing(layer ociv1.Layer) (str string, err error) {
 
 func writeLayerToFile(t *testing.T, filename string, layer ociv1.Layer) {
 	t.Helper()
-	w, err := os.Create(filename)
+	file, err := os.Create(filename)
 	if err != nil {
 		t.Errorf("error writing layer to file %q: %v", filename, err)
 	}
 	defer func() {
-		if err := w.Close(); err != nil {
+		if err := file.Close(); err != nil {
 			t.Errorf("error writing layer to file %q: %v", filename, err)
 		}
 	}()
 
-	if err := fsutil.WriteLayer(layer, w); err != nil {
+	if err := fsutil.WriteLayer(layer, file); err != nil {
 		t.Errorf("error writing layer to file %q: %v", filename, err)
 	}
 }

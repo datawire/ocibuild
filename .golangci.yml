@@ -10,6 +10,7 @@ linters:
     - misspell
     - nolintlint
     - unused
+    - varnamelen
 linters-settings:
   depguard:
     list-type: blacklist
@@ -35,6 +36,15 @@ linters-settings:
     allow-leading-space: false
     require-explanation: true
     require-specific: true
+  varnamelen:
+    ignore-names:
+      - bs # ByteS
+      - fn # FunctioN
+      - ok # OKay
+      - tc # TestCase
+      - i  # Index
+      - 'a'
+      - 'b'
 issues:
   exclude-rules:
     ## Exceptions for specifications ################################
@@ -50,3 +60,4 @@ issues:
       path: 'borrowed_.*\.go$'
       linters:
         - gocritic
+        - varnamelen

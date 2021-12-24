@@ -42,7 +42,7 @@ func NewConfigParser() *ConfigParser {
 	}
 }
 
-func (p *ConfigParser) Parse(fp io.Reader) (Config, error) {
+func (p *ConfigParser) Parse(_file io.Reader) (Config, error) {
 	config := make(Config)
 
 	var (
@@ -60,11 +60,11 @@ func (p *ConfigParser) Parse(fp io.Reader) (Config, error) {
 		}
 	}
 
-	fpLines := bufio.NewReader(fp)
+	file := bufio.NewReader(_file)
 	lineno := 0
 	keepGoing := true
 	for keepGoing {
-		line, err := fpLines.ReadString('\n')
+		line, err := file.ReadString('\n')
 		if err != nil {
 			if err != io.EOF {
 				return nil, err

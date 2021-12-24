@@ -73,15 +73,15 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 			if !ok {
 				continue
 			}
-			for k, v := range sectionData {
-				m := reFuncRef.FindStringSubmatch(v)
+			for key, val := range sectionData {
+				m := reFuncRef.FindStringSubmatch(val)
 				if m == nil {
-					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, k, v)
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, key, val)
 				}
 				funcRef := m[reFuncRef.SubexpIndex("callable")]
 				parts := strings.Split(funcRef, ":")
 				if len(parts) != 2 {
-					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, k, v)
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, key, val)
 				}
 				var buf bytes.Buffer
 				if err := scriptTmpl.Execute(&buf, map[string]string{
@@ -90,11 +90,11 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 					"ImportName": strings.SplitN(parts[1], ".", 2)[0],
 					"Func":       parts[1],
 				}); err != nil {
-					return fmt.Errorf("%s: %s: %w", sectionName, k, err)
+					return fmt.Errorf("%s: %s: %w", sectionName, key, err)
 				}
 				header := &tar.Header{
 					Typeflag: tar.TypeReg,
-					Name:     path.Join(plat.Scheme.Scripts[1:], k),
+					Name:     path.Join(plat.Scheme.Scripts[1:], key),
 					Mode:     0o755,
 					Size:     int64(buf.Len()),
 					ModTime:  clampTime,

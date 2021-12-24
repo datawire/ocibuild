@@ -11,13 +11,13 @@ import (
 )
 
 func PathOpener(filename string) ociv1tarball.Opener {
-	fi, err := os.Stat(filename)
+	fileinfo, err := os.Stat(filename)
 	if err != nil {
 		return func() (io.ReadCloser, error) {
 			return nil, err
 		}
 	}
-	if fi.Mode().IsRegular() {
+	if fileinfo.Mode().IsRegular() {
 		// Open the file for each access.  This does not work on pipes.
 		return func() (io.ReadCloser, error) {
 			file, err := os.Open(filename)

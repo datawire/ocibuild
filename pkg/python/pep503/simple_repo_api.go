@@ -92,11 +92,11 @@ func (c Client) get(ctx context.Context, requestURL string) (_ *url.URL, _ []byt
 		return nil, nil, &HTTPError{Status: resp.Status, StatusCode: resp.StatusCode}
 	}
 	if u, err := url.Parse(requestURL); err == nil && u.Fragment != "" {
-		if vals, err := url.ParseQuery(u.Fragment); err == nil {
-			for k, vs := range vals {
+		if keyvals, err := url.ParseQuery(u.Fragment); err == nil {
+			for key, vals := range keyvals {
 				var sum []byte
-				for _, v := range vs {
-					switch k {
+				for _, val := range vals {
+					switch key {
 					case "md5":
 						_sum := md5.Sum(content)
 						sum = _sum[:]
@@ -116,8 +116,8 @@ func (c Client) get(ctx context.Context, requestURL string) (_ *url.URL, _ []byt
 						_sum := sha512.Sum512(content)
 						sum = _sum[:]
 					}
-					if sum != nil && hex.EncodeToString(sum) != v {
-						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s", k, v, hex.EncodeToString(sum))
+					if sum != nil && hex.EncodeToString(sum) != val {
+						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s", key, val, hex.EncodeToString(sum))
 					}
 				}
 			}
@@ -254,14 +254,14 @@ func normalize(str string) string {
 func (c Client) ListPackageFiles(ctx context.Context, pkgname string) ([]FileLink, error) {
 	// "the only valid characters in a name are the ASCII alphabet, ASCII numbers, `.`, `-`, and
 	// `_`."
-	for _, c := range pkgname {
-		if !(('a' <= c && c <= 'z') ||
-			('A' <= c && c <= 'Z') ||
-			('0' <= c && c <= '9') ||
-			c == '.' ||
-			c == '-' ||
-			c == '_') {
-			return nil, fmt.Errorf("illegal character in pkgname: %q: %s", pkgname, strconv.QuoteRuneToASCII(c))
+	for _, char := range pkgname {
+		if !(('a' <= char && char <= 'z') ||
+			('A' <= char && char <= 'Z') ||
+			('0' <= char && char <= '9') ||
+			char == '.' ||
+			char == '-' ||
+			char == '_') {
+			return nil, fmt.Errorf("illegal character in pkgname: %q: %s", pkgname, strconv.QuoteRuneToASCII(char))
 		}
 	}
 

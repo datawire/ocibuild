@@ -19,7 +19,7 @@ type skipReader struct {
 	inner io.Reader
 }
 
-func (r *skipReader) Read(p []byte) (int, error) {
+func (r *skipReader) Read(buf []byte) (int, error) {
 	if r.skip > 0 {
 		buff := make([]byte, r.skip)
 		n, err := io.ReadFull(r.inner, buff)
@@ -31,7 +31,7 @@ func (r *skipReader) Read(p []byte) (int, error) {
 			return 0, err
 		}
 	}
-	return r.inner.Read(p)
+	return r.inner.Read(buf)
 }
 
 type readCloser struct {
@@ -115,15 +115,15 @@ func (f *tarEntry) IsDir() bool                  { return f.header.FileInfo().Is
 func (f *tarEntry) Sys() interface{}             { return f.header }
 func (f *tarEntry) Open() (io.ReadCloser, error) { return f.open() }
 
-func newTarEntry(in fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
-	header, err := tar.FileInfoHeader(in, "")
+func newTarEntry(inFile fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
+	header, err := tar.FileInfoHeader(inFile, "")
 	if err != nil {
 		return nil, err
 	}
-	header.Name = in.FullName()
+	header.Name = inFile.FullName()
 	fn(header)
 	return &tarEntry{
 		header: header,
-		open:   in.Open,
+		open:   inFile.Open,
 	}, nil
 }

@@ -130,7 +130,7 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 	}
 }
 
-func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
+func (f *fsfile) WriteTo(basedir string, tarWriter *tar.Writer) error {
 	name := path.Join(basedir, f.name)
 
 	if f.header != nil {
@@ -139,10 +139,10 @@ func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
 		}
 		hdr := *f.header // shallow copy
 		hdr.Name = name
-		if err := w.WriteHeader(&hdr); err != nil {
+		if err := tarWriter.WriteHeader(&hdr); err != nil {
 			return err
 		}
-		if _, err := w.Write(f.body); err != nil {
+		if _, err := tarWriter.Write(f.body); err != nil {
 			return err
 		}
 	}
@@ -167,7 +167,7 @@ func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
 
 	for _, childName := range childNames {
 		child := f.children[childName]
-		if err := child.WriteTo(name, w); err != nil {
+		if err := child.WriteTo(name, tarWriter); err != nil {
 			return err
 		}
 	}
