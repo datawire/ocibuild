@@ -27,8 +27,8 @@ func TestParseVersionSpecifier(t *testing.T) {
 		OutputErr string
 	}
 	testcases := []TestCase{
-		{"2.5", pep345.VersionSpecifier{{pep345.CmpOp_EQ, parseVersion(t, "2.5")}}, ""},
-		{"==2.5", pep345.VersionSpecifier{{pep345.CmpOp_EQ, parseVersion(t, "2.5")}}, ""},
+		{"2.5", pep345.VersionSpecifier{{pep345.CmpOpEQ, parseVersion(t, "2.5")}}, ""},
+		{"==2.5", pep345.VersionSpecifier{{pep345.CmpOpEQ, parseVersion(t, "2.5")}}, ""},
 	}
 	t.Parallel()
 	for i, tc := range testcases {

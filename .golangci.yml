@@ -9,6 +9,7 @@ linters:
     - gofumpt
     - misspell
     - nolintlint
+    - revive
     - unused
     - varnamelen
 linters-settings:
@@ -47,12 +48,22 @@ linters-settings:
       - 'b'
 issues:
   exclude-rules:
+    ## Personal exceptions ##########################################
+
+    - # Allow Cmp methods to be (a, b)
+      linters: [revive]
+      text: "receiver-naming: receiver name a should be consistent with previous receiver name"
+      source: '^func \(a \S+\) Cmp\(b \S+\) int {'
+
     ## Exceptions for specifications ################################
 
     - # Allow PEPs to use a few UK-isms
       linters: [misspell]
       path: '^pkg/python/(pep|pypa/)'
       text: '`(behaviours?|standardised)` is a misspelling'
+    - # Package names are based on specification names
+      linters: [revive]
+      text: "var-naming: don't use an underscore in package name"
 
     ## Exceptions for borrowed code #################################
 

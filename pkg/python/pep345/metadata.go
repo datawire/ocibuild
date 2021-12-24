@@ -49,22 +49,22 @@ func (spec VersionSpecifier) Match(ver pep440.Version) bool {
 type CmpOp int
 
 const (
-	CmpOp_LT CmpOp = iota
-	CmpOp_GT
-	CmpOp_LE
-	CmpOp_GE
-	CmpOp_EQ
-	CmpOp_NE
+	CmpOpLT CmpOp = iota
+	CmpOpGT
+	CmpOpLE
+	CmpOpGE
+	CmpOpEQ
+	CmpOpNE
 )
 
 func (op CmpOp) String() string {
 	str, ok := map[CmpOp]string{
-		CmpOp_LT: "<",
-		CmpOp_GT: ">",
-		CmpOp_LE: "<=",
-		CmpOp_GE: ">=",
-		CmpOp_EQ: "==",
-		CmpOp_NE: "!=",
+		CmpOpLT: "<",
+		CmpOpGT: ">",
+		CmpOpLE: "<=",
+		CmpOpGE: ">=",
+		CmpOpEQ: "==",
+		CmpOpNE: "!=",
 	}[op]
 	if !ok {
 		panic(fmt.Errorf("invalid CmpOp: %d", op))
@@ -82,25 +82,25 @@ func parseVersionSpecifierClause(str string) (VersionSpecifierClause, error) {
 	str = strings.TrimSpace(str)
 	switch {
 	case strings.HasPrefix(str, "<") && !strings.HasPrefix(str, "<="):
-		ret.CmpOp = CmpOp_LT
+		ret.CmpOp = CmpOpLT
 		str = str[1:]
 	case strings.HasPrefix(str, ">") && !strings.HasPrefix(str, ">="):
-		ret.CmpOp = CmpOp_GT
+		ret.CmpOp = CmpOpGT
 		str = str[1:]
 	case strings.HasPrefix(str, "<="):
-		ret.CmpOp = CmpOp_LE
+		ret.CmpOp = CmpOpLE
 		str = str[2:]
 	case strings.HasPrefix(str, ">="):
-		ret.CmpOp = CmpOp_GE
+		ret.CmpOp = CmpOpGE
 		str = str[2:]
 	case strings.HasPrefix(str, "=="):
-		ret.CmpOp = CmpOp_EQ
+		ret.CmpOp = CmpOpEQ
 		str = str[2:]
 	case strings.HasPrefix(str, "!="):
-		ret.CmpOp = CmpOp_NE
+		ret.CmpOp = CmpOpNE
 		str = str[2:]
 	default:
-		ret.CmpOp = CmpOp_EQ
+		ret.CmpOp = CmpOpEQ
 	}
 	ver, err := pep440.ParseVersion(str)
 	if err != nil {
@@ -112,26 +112,26 @@ func parseVersionSpecifierClause(str string) (VersionSpecifierClause, error) {
 
 func (spec VersionSpecifierClause) Match(ver pep440.Version) bool {
 	switch spec.CmpOp {
-	case CmpOp_LT:
+	case CmpOpLT:
 		// also exclude pre-releases
-		excl := pep440.SpecifierClause{CmpOp: pep440.CmpOp_PrefixExclude, Version: spec.Version}
+		excl := pep440.SpecifierClause{CmpOp: pep440.CmpOpPrefixExclude, Version: spec.Version}
 		if len(spec.Version.Local) > 0 || spec.Version.Dev != nil {
 			// not allowed to use PrefixExclude in these cases
-			excl.CmpOp = pep440.CmpOp_StrictExclude
+			excl.CmpOp = pep440.CmpOpStrictExclude
 		}
 		return ver.Cmp(spec.Version) < 0 && excl.Match(ver)
-	case CmpOp_LE:
+	case CmpOpLE:
 		return ver.Cmp(spec.Version) <= 0
-	case CmpOp_GT:
+	case CmpOpGT:
 		return ver.Cmp(spec.Version) > 0
-	case CmpOp_GE:
+	case CmpOpGE:
 		return ver.Cmp(spec.Version) >= 0
-	case CmpOp_EQ:
+	case CmpOpEQ:
 		// base part
-		base := pep440.SpecifierClause{CmpOp: pep440.CmpOp_PrefixMatch, Version: spec.Version}
+		base := pep440.SpecifierClause{CmpOp: pep440.CmpOpPrefixMatch, Version: spec.Version}
 		if len(spec.Version.Local) > 0 || spec.Version.Dev != nil {
 			// not allowed to use PrefixMatch in these cases
-			base.CmpOp = pep440.CmpOp_StrictMatch
+			base.CmpOp = pep440.CmpOpStrictMatch
 		}
 		if !base.Match(ver) {
 			return false
@@ -151,8 +151,8 @@ func (spec VersionSpecifierClause) Match(ver pep440.Version) bool {
 			// dissallow dev, post, pre
 			return ver.Dev == nil && ver.Post == nil && ver.Pre == nil
 		}
-	case CmpOp_NE:
-		spec.CmpOp = CmpOp_EQ
+	case CmpOpNE:
+		spec.CmpOp = CmpOpEQ
 		return !spec.Match(ver)
 	default:
 		panic(fmt.Errorf("invalid CmpOp: %q", spec.CmpOp))

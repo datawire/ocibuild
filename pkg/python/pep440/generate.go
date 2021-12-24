@@ -95,7 +95,7 @@ func (ver LocalVersion) Generate(rand *rand.Rand, size int) reflect.Value {
 var _ quick.Generator = LocalVersion{}
 
 func (op CmpOp) generate(rand *rand.Rand, size int) CmpOp {
-	return CmpOp(rand.Intn(int(_CmpOp_End)))
+	return CmpOp(rand.Intn(int(_CmpOpEnd)))
 }
 
 // Generate implements testing/quick.Generator.

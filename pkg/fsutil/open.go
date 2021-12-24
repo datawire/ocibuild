@@ -26,16 +26,15 @@ func PathOpener(filename string) ociv1tarball.Opener {
 			}
 			return file, nil
 		}
-	} else {
-		// Read the file in to memory once, and then work on that.  This avoids extra IO,
-		// but uses more memory.
-		bs, err := os.ReadFile(filename)
-		return func() (io.ReadCloser, error) {
-			if err != nil {
-				return nil, err
-			}
-			return io.NopCloser(bytes.NewReader(bs)), nil
+	}
+	// Read the file in to memory once, and then work on that.  This avoids extra IO,
+	// but uses more memory.
+	bs, err := os.ReadFile(filename)
+	return func() (io.ReadCloser, error) {
+		if err != nil {
+			return nil, err
 		}
+		return io.NopCloser(bytes.NewReader(bs)), nil
 	}
 }
 
