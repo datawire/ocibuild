@@ -834,14 +834,14 @@ func (wh *wheel) integrityCheck(ctx context.Context) error {
 	checkFile := func(filename, algo string) (hash string, size int, err error) {
 		reader, err := wh.Open(filename)
 		if err != nil {
-			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+			return "", 0, err
 		}
 		defer func() {
 			_ = reader.Close()
 		}()
 		bs, err := io.ReadAll(reader)
 		if err != nil {
-			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+			return "", 0, err
 		}
 		size = len(bs)
 		if algo != "" {
@@ -876,16 +876,17 @@ func (wh *wheel) integrityCheck(ctx context.Context) error {
 		algo := strings.SplitN(hash, "=", 2)[0]
 		actHash, actSize, err := checkFile(name, algo)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("RECORD row %d: %w", i, err))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: %w",
+				i, name, err))
 			continue
 		}
 		if hash != "" && actHash != hash {
-			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file hash %q does not match RECORD hash %q",
-				i, name, actHash, hash))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: checksum mismatch: RECORD=%q actual=%q",
+				i, name, hash, actHash))
 		}
 		if size != "" && strconv.Itoa(actSize) != size {
-			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file size %d does not match RECORD size %s",
-				i, name, actSize, size))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: size mismatch: RECORD=%s actual=%d",
+				i, name, size, actSize))
 		}
 	}
 
