@@ -630,6 +630,7 @@ func parseVersion(str string) (*Version, error) {
 
 	parseLetterNumber := func(letter, number string, acceptableLetters map[string][]string) (*letterNumber, error) {
 		if letter == "" && number == "" {
+			//nolint:nilnil // weird semantic
 			return nil, nil
 		}
 		letter = strings.ToLower(letter)

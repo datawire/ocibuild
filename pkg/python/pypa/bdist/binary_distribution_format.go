@@ -110,7 +110,7 @@ func InstallWheel(
 		cachedDistInfoDir: "", // don't know it yet
 	}
 
-	if err := wh.integrityCheck(ctx); err != nil {
+	if err := wh.integrityCheck(); err != nil {
 		return nil, fmt.Errorf("bdist.InstallWheel: wheel integrity: %w", err)
 	}
 
@@ -342,7 +342,7 @@ func (wh *wheel) installToVFS(
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
 	//      enough to remove .pyc even if it is not mentioned in RECORD.)
-	var srcs []fsutil.FileReference
+	var srcs []fsutil.FileReference //nolint:prealloc // 'continue' is quite likely
 	for _, file := range vfs {
 		if !strings.HasSuffix(file.Name(), ".py") {
 			continue
@@ -397,7 +397,7 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 			continue
 		}
 
-		entry := vfs[filename].(*zipEntry)
+		entry := vfs[filename].(*zipEntry) //nolint:forcetypeassert // it's a bug if it's not true
 
 		originalOpen := entry.open
 		shebang := plat.ConsoleShebang
@@ -810,7 +810,7 @@ var strongHashes = map[string]func() hash.Hash{
 //
 //
 
-func (wh *wheel) integrityCheck(ctx context.Context) error {
+func (wh *wheel) integrityCheck() error {
 	distInfoDir, err := wh.distInfoDir()
 	if err != nil {
 		return err

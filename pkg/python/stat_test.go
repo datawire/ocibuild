@@ -10,6 +10,7 @@ import (
 )
 
 func TestStatModeString(t *testing.T) {
+	t.Parallel()
 	fn := func(mode python.StatMode) bool {
 		if mode&python.ModeFmt == python.ModeFmtWhiteout {
 			// S_IFWHT isn't defined on all platforms (it is on macOS, but not on
@@ -20,9 +21,12 @@ func TestStatModeString(t *testing.T) {
 		}
 
 		act := mode.String()
+
+		// #nosec G204 -- it's perfectly safe to insert an integer
 		exp, _ := exec.Command("python3", "-c",
 			fmt.Sprintf(`import stat; print(stat.filemode(%d), end="")`, mode)).
 			Output()
+
 		return act == string(exp)
 	}
 	if err := quick.Check(fn, nil); err != nil {

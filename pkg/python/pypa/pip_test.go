@@ -154,13 +154,15 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 // Test against the Package Installer for Python.
 func TestPIP(t *testing.T) {
+	t.Parallel()
 	t.Logf("reproducible.Now() => %v", reproducible.Now())
 
+	//nolint:thelper // actually the main thing
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
 		ctx := dlog.NewTestContext(t, true)
 		tmpdir := t.TempDir()
 
-		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0o666))
 
 		// pip reference install
 		expLayer, err := pipInstall(ctx,

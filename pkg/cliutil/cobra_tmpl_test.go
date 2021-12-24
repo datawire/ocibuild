@@ -1,7 +1,6 @@
 package cliutil_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -11,7 +10,9 @@ import (
 	"github.com/datawire/ocibuild/pkg/cliutil"
 )
 
+//nolint:paralleltest // can't use .Parallel() with .Setenv()
 func TestHelpTemplate(t *testing.T) {
+	t.Setenv("COLUMNS", "80")
 	noopRunE := func(_ *cobra.Command, _ []string) error {
 		return nil
 	}
@@ -161,7 +162,6 @@ func TestHelpTemplate(t *testing.T) {
 				"",
 		},
 	}
-	os.Setenv("COLUMNS", "80")
 	for tcName, tcData := range testcases {
 		tcData := tcData
 		t.Run(tcName, func(t *testing.T) {

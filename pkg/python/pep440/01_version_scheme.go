@@ -76,6 +76,8 @@ type PreRelease struct {
 }
 
 // GoString implements fmt.GoStringer.
+//
+//nolint:goconst // "nil" is not worth being a const
 func (ver PublicVersion) GoString() string {
 	pre := "nil"
 	if ver.Pre != nil {

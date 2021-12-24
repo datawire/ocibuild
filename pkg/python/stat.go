@@ -72,7 +72,7 @@ func (pyMode StatMode) ToGo() fs.FileMode {
 	}
 
 	// type
-	switch pyMode & ModeFmt {
+	switch pyMode & ModeFmt { //nolint:exhaustive // only care about the ModeFmt bits
 	case ModeFmtBlockDevice:
 		goMode |= fs.ModeDevice
 	case ModeFmtCharDevice:
@@ -87,6 +87,8 @@ func (pyMode StatMode) ToGo() fs.FileMode {
 		// nothing to do
 	case ModeFmtSocket:
 		goMode |= fs.ModeSocket
+	default: // ModeFmtWhiteout or _ModeFmtUnusedXXX
+		goMode |= fs.ModeIrregular
 	}
 
 	return goMode
@@ -109,7 +111,7 @@ func ModeFromGo(goMode fs.FileMode) StatMode {
 	}
 
 	// type
-	switch goMode & fs.ModeType {
+	switch goMode & fs.ModeType { //nolint:exhaustive // only care about the fs.ModeType bits
 	case fs.ModeDevice:
 		pyMode |= ModeFmtBlockDevice
 	case fs.ModeDevice | fs.ModeCharDevice:

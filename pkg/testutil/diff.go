@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -46,7 +47,7 @@ func DumpLayerFull(layer ociv1.Layer) (str string, err error) {
 	for {
 		header, err := tarReader.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return "", err
@@ -108,7 +109,7 @@ func DumpLayerListing(layer ociv1.Layer) (str string, err error) {
 	for {
 		header, err := tarReader.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return "", err

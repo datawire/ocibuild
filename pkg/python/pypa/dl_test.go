@@ -18,9 +18,12 @@ import (
 )
 
 func TestDownload(t *testing.T) {
+	t.Parallel()
+	//nolint:thelper // actually the main thing
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {})
 }
 
+//nolint:thelper // useful in the trace
 func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, content []byte)) {
 	type Download struct {
 		Name             string
@@ -135,7 +138,6 @@ func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, c
 	}
 
 	client := simple_repo_api.NewClient(pythonVersion, pythonTags)
-	t.Parallel()
 	for _, testDownload := range downloads {
 		testDownload := testDownload
 		t.Run(testDownload.ExpectedFilename, func(t *testing.T) {

@@ -3,6 +3,7 @@ package bdist
 import (
 	"archive/tar"
 	"archive/zip"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -25,7 +26,7 @@ func (r *skipReader) Read(buf []byte) (int, error) {
 		n, err := io.ReadFull(r.inner, buff)
 		r.skip -= n
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
 			}
 			return 0, err
@@ -63,7 +64,7 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 			Err: os.ErrNotExist,
 		}
 	}
-	isDir := ref.IsDir()
+	isDir := ref.IsDir() //nolint:ifshort // gotta do this before setting .header.Name
 	ref.(*zipEntry).header.Name = newpath
 	if isDir {
 		ref.(*zipEntry).header.Name += "/"

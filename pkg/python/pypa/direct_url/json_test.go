@@ -1,4 +1,4 @@
-package direct_url
+package direct_url //nolint:testpackage // testing an internal thing
 
 import (
 	"strconv"
@@ -8,6 +8,7 @@ import (
 )
 
 func TestJSONDumps(t *testing.T) {
+	t.Parallel()
 	type testcase struct {
 		Input  interface{}
 		Output string
@@ -25,6 +26,7 @@ func TestJSONDumps(t *testing.T) {
 	for i, tc := range testcases {
 		tc := tc
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
 			out, err := jsonDumps(tc.Input)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.Output, string(out))

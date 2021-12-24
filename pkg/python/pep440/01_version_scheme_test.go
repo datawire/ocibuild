@@ -380,6 +380,7 @@ func TestUtilMethods(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Input.String(), func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.Input.Major(), tc.Major, "Major")
 			assert.Equal(t, tc.Input.Minor(), tc.Minor, "Minor")
 			assert.Equal(t, tc.Input.Micro(), tc.Micro, "Micro")

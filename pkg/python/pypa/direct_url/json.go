@@ -3,6 +3,7 @@ package direct_url
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 )
 
@@ -42,7 +43,7 @@ func jsonDumps(typedObj interface{}) ([]byte, error) {
 	for {
 		tok, err := decoder.Token()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return dst.Bytes(), nil
 			}
 			return nil, err

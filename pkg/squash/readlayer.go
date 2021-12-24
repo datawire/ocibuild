@@ -2,6 +2,7 @@ package squash
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -35,7 +36,7 @@ func parseLayer(layer ociv1.Layer) (*layerFS, error) {
 	for {
 		header, err := tarReader.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, fmt.Errorf("reading tar: %w", err)

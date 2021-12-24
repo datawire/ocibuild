@@ -95,7 +95,7 @@ func (ver LocalVersion) Generate(rand *rand.Rand, size int) reflect.Value {
 //nolint:exhaustivestruct
 var _ quick.Generator = LocalVersion{}
 
-func (op CmpOp) generate(rand *rand.Rand, size int) CmpOp {
+func (op CmpOp) generate(rand *rand.Rand, _ int) CmpOp {
 	return CmpOp(rand.Intn(int(_CmpOpEnd)))
 }
 
