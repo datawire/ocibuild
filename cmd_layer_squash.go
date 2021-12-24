@@ -6,6 +6,7 @@ import (
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/squash"
 )
@@ -14,7 +15,7 @@ func init() {
 	cmd := &cobra.Command{
 		Use:   "squash [flags] IN_LAYERFILES... >OUT_LAYERFILE",
 		Short: "Squash several layers in to a single layer",
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cliutil.WrapPositionalArgs(cobra.MinimumNArgs(2)),
 		RunE: func(flags *cobra.Command, args []string) error {
 			layers := make([]ociv1.Layer, 0, len(args))
 			for _, layerpath := range args {

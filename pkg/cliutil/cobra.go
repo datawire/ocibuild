@@ -27,6 +27,14 @@ func OnlySubcommands(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// WrapPositionalArgs wraps a cobra.PositionalArgs to have it pass any errors through FlagErrorFunc,
+// in order to have more consistent bad-usage reporting.
+func WrapPositionalArgs(inner cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		return FlagErrorFunc(cmd, inner(cmd, args))
+	}
+}
+
 // RunSubCommands is for use as a cobra.Command.RunE for commands that don't do anything themselves
 // but have subcommands.  In such cases, it is important to set RunE even though there's nothing to
 // run, because otherwise cobra will treat that as "success", and it shouldn't be "success" if the

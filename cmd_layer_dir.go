@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/dir"
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/reproducible"
@@ -15,7 +16,7 @@ func init() {
 	cmd := &cobra.Command{
 		Use:   "dir [flags] IN_DIRNAME >OUT_LAYERFILE",
 		Short: "Create a layer from a directory",
-		Args:  cobra.ExactArgs(1),
+		Args:  cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			var prefix *dir.Prefix
 			if flagPrefix.DirName != "" {

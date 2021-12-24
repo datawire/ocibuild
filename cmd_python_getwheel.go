@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/python/pep503"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python/pypa/simple_repo_api"
@@ -16,7 +17,7 @@ func init() {
 	cmd := &cobra.Command{
 		Use:   "getwheel [flags] NAME_VERSION_PLATFORM.whl >NAME_VERSION_PLATFORM.whl",
 		Short: "Download a wheel file from the Python Package Index",
-		Args:  cobra.ExactArgs(1),
+		Args:  cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),
 
 		Long: "Given a wheel filename, download it from a package index, writing the file " +
 			"contents to stdout." +

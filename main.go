@@ -18,7 +18,7 @@ var (
 		Use:   "ocibuild {[flags]|SUBCOMMAND...}",
 		Short: "Manipulate OCI/Docker images and layers as regular files",
 
-		Args: cliutil.OnlySubcommands,
+		Args: cliutil.WrapPositionalArgs(cliutil.OnlySubcommands),
 		RunE: cliutil.RunSubcommands,
 
 		SilenceErrors: true, // main() will handle this after .ExecuteContext() returns
@@ -32,21 +32,21 @@ var (
 		Use:   "image {[flags]|SUBCOMMAND...}",
 		Short: "Manipulate complete images",
 
-		Args: cliutil.OnlySubcommands,
+		Args: cliutil.WrapPositionalArgs(cliutil.OnlySubcommands),
 		RunE: cliutil.RunSubcommands,
 	}
 	argparserLayer = &cobra.Command{
 		Use:   "layer {[flags]|SUBCOMMAND...}",
 		Short: "Manipulate individual layers for use in an image",
 
-		Args: cliutil.OnlySubcommands,
+		Args: cliutil.WrapPositionalArgs(cliutil.OnlySubcommands),
 		RunE: cliutil.RunSubcommands,
 	}
 	argparserPython = &cobra.Command{
 		Use:   "python {[flags]|SUBCOMMAND...}",
 		Short: "Interact with Python without the target environment",
 
-		Args: cliutil.OnlySubcommands,
+		Args: cliutil.WrapPositionalArgs(cliutil.OnlySubcommands),
 		RunE: cliutil.RunSubcommands,
 	}
 )

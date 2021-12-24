@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/gobuild"
 	"github.com/datawire/ocibuild/pkg/reproducible"
@@ -17,7 +18,7 @@ func init() {
 		Long: "Works more or less like `go build`.  Passes through env-vars (except for " +
 			"GOOS and GOARCH; naturally those need to be set to reflect the target " +
 			"layer).  Use GOFLAGS to pass in extra flags.",
-		Args: cobra.MinimumNArgs(1),
+		Args: cliutil.WrapPositionalArgs(cobra.MinimumNArgs(1)),
 		RunE: func(flags *cobra.Command, args []string) error {
 			layer, err := gobuild.LayerFromGo(flags.Context(), reproducible.Now(), args)
 			if err != nil {
