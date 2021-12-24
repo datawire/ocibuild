@@ -13,7 +13,7 @@ import (
 // Plan 9, and Python's bits match those of the Linux kernel.
 type StatMode uint16
 
-//nolint:deadcode,varcheck
+//nolint:deadcode,varcheck // not all of these modes will be used
 const (
 	// 16 bits = 5⅓ octal characters
 
@@ -182,7 +182,7 @@ type StatFileAttribute uint32
 
 // https://docs.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants
 //
-//nolint:deadcode,varcheck
+//nolint:deadcode,varcheck // not all of these modes will be used
 const (
 	// 1<<0 through 1<<7
 	FileAttributeReadonly  StatFileAttribute = StatFileAttribute(DOSReadOnly)
