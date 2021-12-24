@@ -10,7 +10,7 @@ ocibuild image build [flags] IN_LAYERFILES... >OUT_IMAGEFILE
 
 ```
       --base IN_IMAGEFILE       Use IN_IMAGEFILE as the base of the image
-  -e, --entrypoint Entrypoint   Set the resulting image's Entrypoint
+      --entrypoint ENTRYPOINT   Set the resulting image's ENTRYPOINT
   -h, --help                    help for build
   -t, --tag TAG                 Tag the resulting image as TAG
 ```
