@@ -17,7 +17,7 @@ import (
 //  1. Includes whiteout markers in the output, since we don't assume to have the root layer.
 //  2. Squash properly implements "opaque whiteouts", which go-containerregistry doesn't support.
 func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
-	root := &fsfile{
+	root := &fsfile{ //nolint:exhaustivestruct
 		name: ".",
 	}
 	// Apply all the layers

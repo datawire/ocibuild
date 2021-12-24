@@ -31,6 +31,10 @@ func NewClient(python *pep440.Version, supportedTags pep425.Installer) Client {
 		Client: pep503.Client{
 			Python:   python,
 			HTMLHook: pep629.HTMLVersionCheck,
+
+			BaseURL:    "",  // default, let user override after initialization
+			HTTPClient: nil, // default, let user override after initialization
+			UserAgent:  "",  // default, let user override after initialization
 		},
 		SupportedTags: supportedTags,
 	}

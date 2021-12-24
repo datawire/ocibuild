@@ -25,7 +25,7 @@ type layerFS struct {
 //
 //  - Paths always path.Clean()'d (notably, directories do NOT contain trailing "/").
 func parseLayer(layer ociv1.Layer) (*layerFS, error) {
-	lfs := &layerFS{}
+	lfs := new(layerFS)
 	layerReader, err := layer.Uncompressed()
 	if err != nil {
 		return nil, fmt.Errorf("reading layer contents: %w", err)

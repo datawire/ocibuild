@@ -53,7 +53,11 @@ func LayerFromGo(
 
 	return dir.LayerFromDir(tmpdir, &dir.Prefix{
 		DirName: "usr/local/bin",
-		UName:   "root",
-		GName:   "root",
+		Mode:    0, // default
+
+		UID:   0,
+		UName: "root",
+		GID:   0,
+		GName: "root",
 	}, clampTime, opts...)
 }

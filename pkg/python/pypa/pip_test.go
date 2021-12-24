@@ -83,10 +83,12 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 		destDir,
 		&dir.Prefix{
 			DirName: layerPrefix,
-			UID:     os.Getuid(),
-			GID:     os.Getgid(),
-			UName:   usr.Username,
-			GName:   grp.Name,
+			Mode:    0, // default
+
+			UID:   os.Getuid(),
+			GID:   os.Getgid(),
+			UName: usr.Username,
+			GName: grp.Name,
 		},
 		reproducible.Now(),
 	)
@@ -182,8 +184,9 @@ func TestPIP(t *testing.T) {
 				recording_installs.Record(
 					"sha256",
 					"pip",
-					&direct_url.DirectURL{
-						URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)), //nolint:lll
+					&direct_url.DirectURL{ //nolint:exhaustivestruct
+						URL: "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+						//nolint:exhaustivestruct
 						ArchiveInfo: &direct_url.ArchiveInfo{},
 					},
 				),

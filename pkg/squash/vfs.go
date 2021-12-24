@@ -66,7 +66,7 @@ func (f *fsfile) Get(child string) *fsfile {
 			f.children = make(map[string]*fsfile)
 		}
 		if _, ok := f.children[child]; !ok {
-			f.children[child] = &fsfile{
+			f.children[child] = &fsfile{ //nolint:exhaustivestruct
 				name:   child,
 				parent: f,
 			}

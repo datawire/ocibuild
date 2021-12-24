@@ -106,6 +106,8 @@ func InstallWheel(
 
 	wh := &wheel{ //nolint:varnamelen // same as receiver name
 		zip: &zipReader.Reader,
+
+		cachedDistInfoDir: "", // don't know it yet
 	}
 
 	if err := wh.integrityCheck(ctx); err != nil {
@@ -155,6 +157,7 @@ func InstallWheel(
 						ModTime:  maxTime,
 					}).FileInfo(),
 					MFullName: dir,
+					MContent:  nil,
 				}
 			}
 		}
