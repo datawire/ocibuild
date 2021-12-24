@@ -13,6 +13,7 @@ func TestJSONDumps(t *testing.T) {
 		Output string
 	}
 	testcases := []testcase{
+		//nolint:lll // long literals
 		{
 			Input: DirectURL{
 				URL:         "file:///run/user/1000/tmpdir/TestPIPFlask-1.1.2-py2.py3-none-any.whl2100032774/001/Flask-1.1.2-py2.py3-none-any.whl",

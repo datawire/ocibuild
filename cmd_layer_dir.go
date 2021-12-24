@@ -32,8 +32,10 @@ func init() {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&flagPrefix.DirName, "prefix", "",
-		`Add a `+"`PREFIX`"+` to the filenames in the directory, should be forward-slash separated and should be absolute but NOT starting with a slash.  For example, "usr/local/bin".`)
+	cmd.Flags().StringVar(&flagPrefix.DirName, "prefix", "", ``+
+		`Add a `+"`PREFIX`"+` to the filenames in the directory, should be forward-slash `+
+		`separated and should be absolute but NOT starting with a slash.  For example, `+
+		`"usr/local/bin".`)
 	cmd.Flags().IntVar(&flagPrefix.UID, "prefix-uid", 0,
 		`The numeric user ID of the --prefix directory`)
 	cmd.Flags().StringVar(&flagPrefix.UName, "prefix-uname", "root",

@@ -42,7 +42,11 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 		return nil, err
 	}
 
-	cmd := dexec.CommandContext(ctx, "pip3", "install", "--no-deps", "--ignore-installed", "--prefix="+destDir, wheelFile)
+	cmd := dexec.CommandContext(ctx, "pip3", "install",
+		"--no-deps",
+		"--ignore-installed",
+		"--prefix="+destDir,
+		wheelFile)
 	cmd.Env = append(os.Environ(),
 		"PYTHONHASHSEED=0",
 		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
@@ -179,7 +183,7 @@ func TestPIP(t *testing.T) {
 					"sha256",
 					"pip",
 					&direct_url.DirectURL{
-						URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+						URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)), //nolint:lll
 						ArchiveInfo: &direct_url.ArchiveInfo{},
 					},
 				),

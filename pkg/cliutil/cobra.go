@@ -56,7 +56,8 @@ func FlagErrorFunc(cmd *cobra.Command, err error) error {
 		errStr += "\n"
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "%s: %s\nSee '%s --help' for more information.\n", cmd.CommandPath(), errStr, cmd.CommandPath())
+	fmt.Fprintf(cmd.ErrOrStderr(), "%s: %s\nSee '%s --help' for more information.\n",
+		cmd.CommandPath(), errStr, cmd.CommandPath())
 	os.Exit(2)
 	return nil
 }

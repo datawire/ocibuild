@@ -27,7 +27,12 @@ type Prefix struct {
 	GName string
 }
 
-func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromDir(
+	dirname string,
+	prefix *Prefix,
+	clampTime time.Time,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	type logEntry struct {
 		Name string
 		Info fs.FileInfo

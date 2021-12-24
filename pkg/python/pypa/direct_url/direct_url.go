@@ -36,7 +36,12 @@ type DirInfo struct {
 }
 
 func Record(urlData DirectURL) bdist.PostInstallHook {
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		bs, err := jsonDumps(urlData)
 		if err != nil {
 			return err

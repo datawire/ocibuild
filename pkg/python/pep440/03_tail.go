@@ -521,9 +521,13 @@ import (
 // To test whether a version identifier is in the canonical format, you can use
 // the following function::
 //
+
+//nolint:lll // long regexp in source specification
+//
 //     import re
 //     def is_canonical(version):
 //         return re.match(r'^([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?$', version) is not None
+
 //
 // To extract the components of a version identifier, use the following regular
 // expression (as defined by the `packaging <https://github.com/pypa/packaging>`_

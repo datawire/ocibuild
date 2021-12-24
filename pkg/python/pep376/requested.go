@@ -15,7 +15,12 @@ import (
 )
 
 func RecordRequested(requested string) bdist.PostInstallHook {
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		// REQUESTED
 		// ---------
 		//

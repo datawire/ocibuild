@@ -17,6 +17,7 @@ func init() {
 	})
 }
 
+//nolint:lll // template literal
 const HelpTemplate = `Usage: {{ .UseLine }}
 
 {{- /* Short help text ---------------------------------------------------- */}}

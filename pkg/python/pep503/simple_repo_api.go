@@ -117,7 +117,9 @@ func (c Client) get(ctx context.Context, requestURL string) (_ *url.URL, _ []byt
 						sum = _sum[:]
 					}
 					if sum != nil && hex.EncodeToString(sum) != val {
-						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s", key, val, hex.EncodeToString(sum))
+						//nolint:lll // error string
+						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s",
+							key, val, hex.EncodeToString(sum))
 					}
 				}
 			}
@@ -261,7 +263,8 @@ func (c Client) ListPackageFiles(ctx context.Context, pkgname string) ([]FileLin
 			char == '.' ||
 			char == '-' ||
 			char == '_') {
-			return nil, fmt.Errorf("illegal character in pkgname: %q: %s", pkgname, strconv.QuoteRuneToASCII(char))
+			return nil, fmt.Errorf("illegal character in pkgname: %q: %s",
+				pkgname, strconv.QuoteRuneToASCII(char))
 		}
 	}
 

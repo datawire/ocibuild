@@ -79,7 +79,12 @@ func recordFile(file fsutil.FileReference, hashName string, hasher hash.Hash, ba
 }
 
 func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.PostInstallHook {
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		// 1. The .dist-info directory
 
 		// Trust the wheel to have the correct .dist-info dir.
@@ -129,7 +134,8 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			}
 			row, err := recordFile(file, hashName, hasher, path.Dir(installedDistInfoDir))
 			if err != nil {
-				return fmt.Errorf("recording installed-packaged: recording file %q: %w", file.FullName(), err)
+				return fmt.Errorf("recording installed-packaged: recording file %q: %w",
+					file.FullName(), err)
 			}
 			csvData = append(csvData, row)
 		}

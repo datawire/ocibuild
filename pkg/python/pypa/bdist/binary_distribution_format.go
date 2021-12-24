@@ -85,7 +85,14 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 // it is zero then the timestamps in the wheel file are preserved.
 //
 // If maxTime is zero, then it defaults based on the maximum timestamp in the wheel file.
-func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime time.Time, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func InstallWheel(
+	ctx context.Context,
+	plat python.Platform,
+	minTime, maxTime time.Time,
+	wheelfilename string,
+	hook PostInstallHook,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
 		return nil, fmt.Errorf("bdist.InstallWheel: validate python.Platform: %w", err)
@@ -209,7 +216,12 @@ var specVersion, _ = pep440.ParseVersion("1.0")
 // =======
 //
 
-func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime, maxTime time.Time) (map[string]fsutil.FileReference, string, error) {
+func (wh *wheel) installToVFS(
+	ctx context.Context,
+	plat python.Platform,
+	minTime,
+	maxTime time.Time,
+) (map[string]fsutil.FileReference, string, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -229,7 +241,8 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 		return nil, "", fmt.Errorf("parse Wheel-Version: %w", err)
 	}
 	if wheelVersion.Major() > specVersion.Major() {
-		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
+		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser",
+			wheelVersion)
 	}
 	if wheelVersion.Cmp(*specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
@@ -295,7 +308,8 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 		case "data":
 			dstDataDir = plat.Scheme.Data
 		default:
-			return nil, "", fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
+			return nil, "", fmt.Errorf("unsupported wheel data type %q: %q",
+				key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
 		}
 		newFullName := path.Join(dstDataDir, rest)
 		vfsTypes[newFullName] = key

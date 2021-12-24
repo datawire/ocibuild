@@ -13,7 +13,12 @@ import (
 	"github.com/datawire/ocibuild/pkg/dir"
 )
 
-func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, opts ...ociv1tarball.LayerOption) (_ ociv1.Layer, err error) {
+func LayerFromGo(
+	ctx context.Context,
+	clampTime time.Time,
+	pkgnames []string,
+	opts ...ociv1tarball.LayerOption,
+) (_ ociv1.Layer, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err

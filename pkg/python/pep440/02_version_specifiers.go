@@ -410,7 +410,8 @@ func matchPrefixMatch(_spec, _ver Version) bool {
 	// account .Post and .Dev.
 	if (ver.Pre == nil) != (spec.Pre == nil) {
 		return false
-	} else if spec.Pre != nil && (preReleaseOrder[ver.Pre.L] != preReleaseOrder[spec.Pre.L] || ver.Pre.N != spec.Pre.N) {
+	} else if spec.Pre != nil && (preReleaseOrder[ver.Pre.L] != preReleaseOrder[spec.Pre.L] ||
+		ver.Pre.N != spec.Pre.N) {
 		return false
 	}
 	if terminalPart == partPre {

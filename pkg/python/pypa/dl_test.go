@@ -32,6 +32,8 @@ func testDownloadedWheels(t *testing.T, fn func(t *testing.T, filename string, c
 	//
 	// Don't test 'setuptools' or 'pip'; pip contains special cases for them (that aren't worth
 	// replicating), and so TestPIP will never pass on them.
+	//
+	//nolint:lll // big table
 	downloads := []Download{
 		{"Flask", "1.1.2", "Flask-1.1.2-py2.py3-none-any.whl", "fc9a504c245e5b2425c20da15012566a1f633e60"},
 		{"GitPython", "3.1.11", "GitPython-3.1.11-py3-none-any.whl", "6be334a7292005d0a9505777d3ef0e9ef93e4cfe"},

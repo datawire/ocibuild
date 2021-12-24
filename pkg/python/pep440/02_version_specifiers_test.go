@@ -14,11 +14,13 @@ import (
 
 func TestParseSpecifier(t *testing.T) {
 	t.Parallel()
-	testcases := map[string]struct {
+	type TestCase struct {
 		InStr  string
 		OutVal pep440.Specifier
 		OutErr string
-	}{
+	}
+	//nolint:lll // big table with string literals
+	testcases := map[string]TestCase{
 		"empty":       {"", pep440.Specifier{}, ""},
 		"whitespace":  {"  ", pep440.Specifier{}, ""},
 		"emptycommas": {", ,", pep440.Specifier{}, ""},
@@ -56,12 +58,34 @@ func TestEquivalentSpecifiers(t *testing.T) {
 	}
 	staticInputs := []pep440.Version{
 		pep440.LocalVersion{
-			PublicVersion: pep440.PublicVersion{Epoch: 0, Release: []int{2, 2654, 2662, 1281, 1226}, Pre: &pep440.PreRelease{L: "rc", N: 2647}, Post: nil, Dev: nil},
-			Local:         nil,
+			PublicVersion: pep440.PublicVersion{
+				Epoch:   0,
+				Release: []int{2, 2654, 2662, 1281, 1226},
+				Pre:     &pep440.PreRelease{L: "rc", N: 2647},
+				Post:    nil,
+				Dev:     nil,
+			},
+			Local: nil,
 		},
 		pep440.LocalVersion{
-			PublicVersion: pep440.PublicVersion{Epoch: 0, Release: []int{2, 418, 849}, Pre: nil, Post: intPtr(2328), Dev: intPtr(109)},
-			Local:         []intstr.IntOrString{{Type: 0, IntVal: 830, StrVal: ""}, {Type: 1, IntVal: 0, StrVal: "je4kz"}, {Type: 0, IntVal: 2083, StrVal: ""}, {Type: 0, IntVal: 2694, StrVal: ""}, {Type: 0, IntVal: 1127, StrVal: ""}, {Type: 0, IntVal: 142, StrVal: ""}, {Type: 0, IntVal: 1122, StrVal: ""}, {Type: 0, IntVal: 2676, StrVal: ""}, {Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"}},
+			PublicVersion: pep440.PublicVersion{
+				Epoch:   0,
+				Release: []int{2, 418, 849},
+				Pre:     nil,
+				Post:    intPtr(2328),
+				Dev:     intPtr(109),
+			},
+			Local: []intstr.IntOrString{
+				{Type: 0, IntVal: 830, StrVal: ""},
+				{Type: 1, IntVal: 0, StrVal: "je4kz"},
+				{Type: 0, IntVal: 2083, StrVal: ""},
+				{Type: 0, IntVal: 2694, StrVal: ""},
+				{Type: 0, IntVal: 1127, StrVal: ""},
+				{Type: 0, IntVal: 142, StrVal: ""},
+				{Type: 0, IntVal: 1122, StrVal: ""},
+				{Type: 0, IntVal: 2676, StrVal: ""},
+				{Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"},
+			},
 		},
 	}
 

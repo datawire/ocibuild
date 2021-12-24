@@ -80,13 +80,23 @@ func (wh *wheel) distInfoDir() (string, error) {
 //
 // As a reminder, FileFeference.FullName() returns io/fs paths: (1) forward-slashes and (2) absolute
 // paths but without the leading "/".
-type PostInstallHook func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error
+type PostInstallHook func(
+	ctx context.Context,
+	clampTime time.Time,
+	vfs map[string]fsutil.FileReference,
+	installedDistInfoDir string,
+) error
 
 func PostInstallHooks(hooks ...PostInstallHook) PostInstallHook {
 	if len(hooks) == 0 {
 		return nil
 	}
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		for _, hook := range hooks {
 			if err := hook(ctx, clampTime, vfs, installedDistInfoDir); err != nil {
 				return err

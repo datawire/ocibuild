@@ -55,7 +55,7 @@ func TestHaveRequiredPython(t *testing.T) {
 	}
 	testcases := []TestCase{
 		// Check some parse errors
-		{parseVersion(t, "2.5a1"), "~=2.5", false, `pep345.ParseVersionSpecifier: pep440.ParseVersion: invalid version: "~=2.5"`},
+		{parseVersion(t, "2.5a1"), "~=2.5", false, `pep345.ParseVersionSpecifier: pep440.ParseVersion: invalid version: "~=2.5"`}, //nolint:lll
 
 		// Examples from the spec
 		//

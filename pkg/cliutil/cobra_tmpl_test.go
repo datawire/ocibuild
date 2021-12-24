@@ -132,7 +132,7 @@ func TestHelpTemplate(t *testing.T) {
 				cmd.AddCommand(&cobra.Command{
 					Use:   "example-subcommand [flags]",
 					Args:  cobra.ExactArgs(0),
-					Short: "One line description of subcommand, one line on own, but wrapped in table",
+					Short: "One line description of subcommand, one line on own, but wrapped in table", //nolint:lll
 					RunE:  noopRunE,
 				})
 				return cmd

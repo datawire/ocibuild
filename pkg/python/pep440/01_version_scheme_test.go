@@ -330,7 +330,11 @@ func TestSymmetry(t *testing.T) {
 						ret = ret && ver1.Cmp(ver2) == 0 && ver2.Cmp(ver1) == 0
 					}
 					if !ret {
-						t.Logf("failing:\n\tver1=%s\n\tver2=%s\n\tver1.Cmp(ver2)=%v\n\tver2.Cmp(ver1)=%v",
+						t.Logf("failing:\n"+
+							"\tver1=%s\n"+
+							"\tver2=%s\n"+
+							"\tver1.Cmp(ver2)=%v\n"+
+							"\tver2.Cmp(ver1)=%v",
 							ver1, ver2,
 							ver1.Cmp(ver2), ver2.Cmp(ver1))
 					}
@@ -363,6 +367,7 @@ func TestUtilMethods(t *testing.T) {
 		PublicString  string
 		PublicIsFinal bool
 	}
+	//nolint:lll // big table
 	testcases := []TestCase{
 		{mustParseVersion(t, "1           "), 1, 0, 0, false /*local*/, "1           ", true /**public*/, "1           ", true},
 		{mustParseVersion(t, "1+par       "), 1, 0, 0, false /*local*/, "1+par       ", false /*public*/, "1           ", true},
@@ -383,8 +388,9 @@ func TestUtilMethods(t *testing.T) {
 			assert.Equal(t, tc.Input.String(), strings.TrimSpace(tc.LocalString), "LocalVersion.String")
 			assert.Equal(t, tc.Input.IsFinal(), tc.LocalIsFinal, "LocalVersion.IsFinal")
 
-			assert.Equal(t, tc.Input.PublicVersion.String(), strings.TrimSpace(tc.PublicString), "PublicVersion.String")
-			assert.Equal(t, tc.Input.PublicVersion.IsFinal(), tc.PublicIsFinal, "PublicVersion.IsFinal")
+			pub := tc.Input.PublicVersion
+			assert.Equal(t, pub.String(), strings.TrimSpace(tc.PublicString), "PublicVersion.String")
+			assert.Equal(t, pub.IsFinal(), tc.PublicIsFinal, "PublicVersion.IsFinal")
 		})
 	}
 }

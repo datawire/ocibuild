@@ -45,7 +45,12 @@ if __name__ == '__main__':
 )
 
 func CreateScripts(plat python.Platform) bdist.PostInstallHook {
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		if err := plat.Init(); err != nil {
 			return err
 		}
@@ -76,12 +81,14 @@ func CreateScripts(plat python.Platform) bdist.PostInstallHook {
 			for key, val := range sectionData {
 				m := reFuncRef.FindStringSubmatch(val)
 				if m == nil {
-					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, key, val)
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q",
+						sectionName, key, val)
 				}
 				funcRef := m[reFuncRef.SubexpIndex("callable")]
 				parts := strings.Split(funcRef, ":")
 				if len(parts) != 2 {
-					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q", sectionName, key, val)
+					return fmt.Errorf("entry_points.txt: %q: %q: not a function reference: %q",
+						sectionName, key, val)
 				}
 				var buf bytes.Buffer
 				if err := scriptTmpl.Execute(&buf, map[string]string{

@@ -87,6 +87,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 func TestSquash(t *testing.T) {
 	t.Parallel()
 
+	//nolint:lll // big table
 	testcases := map[string]struct {
 		Input  []TestLayer
 		Output TestLayer

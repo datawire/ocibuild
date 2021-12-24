@@ -23,7 +23,11 @@ type FileReference interface {
 	Open() (io.ReadCloser, error)
 }
 
-func LayerFromFileReferences(vfs []FileReference, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromFileReferences(
+	vfs []FileReference,
+	clampTime time.Time,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	sort.Slice(vfs, func(i, j int) bool {
 		// Do a part-wise comparison, rather than a simple string compare on .Fullname(),
 		// because "-" < "/" < EOF.
