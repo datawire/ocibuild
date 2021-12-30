@@ -110,7 +110,7 @@ func pipPlatform(ctx context.Context, destDir string) (python.Platform, error) {
 	schemeBytes, err := dexec.CommandContext(ctx, "python3", "-c", `
 import sys
 import json
-from pip._internal.locations import get_scheme;
+from pip._internal.locations import get_scheme
 scheme=get_scheme("", prefix=sys.argv[1])
 print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 `, destDir).Output()
