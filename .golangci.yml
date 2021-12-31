@@ -59,6 +59,7 @@ linters-settings:
       - '^github\.com/google/go-containerregistry/pkg/v1\.(Layer|Image)$'
       - '^github\.com/datawire/ocibuild/pkg/fsutil\.FileReference$'
       - '^github\.com/datawire/ocibuild/pkg/python/pep440\.ExclusionBehavior$'
+      - '^github\.com/datawire/ocibuild/pkg/python/pyinspect.FileInfo$'
   lll:
     # mimic .editorconfig, plus 20 chars of slop
     line-length: 120

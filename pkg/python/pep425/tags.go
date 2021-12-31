@@ -4,6 +4,7 @@
 package pep425
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -25,8 +26,33 @@ func (t Tag) Decompress() []Tag {
 	return ret
 }
 
+func ParseTag(str string) (Tag, error) {
+	parts := strings.Split(str, "-")
+	if len(parts) != 3 {
+		return Tag{}, fmt.Errorf("pep425.ParseTag: invalid tag: %q", str)
+	}
+	return Tag{
+		Python:   parts[0],
+		ABI:      parts[1],
+		Platform: parts[2],
+	}, nil
+}
+
 func (t Tag) String() string {
 	return t.Python + "-" + t.ABI + "-" + t.Platform
+}
+
+func (t Tag) MarshalText() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+func (t *Tag) UnmarshalText(txt []byte) error {
+	_t, err := ParseTag(string(txt))
+	if err != nil {
+		return err
+	}
+	*t = _t
+	return nil
 }
 
 // Intersect returns whether any tag in tag-list 'a' matches any tag in tag-list 'b'; considering
