@@ -6,10 +6,6 @@ package pep503
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -23,6 +19,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pep345"
 	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
@@ -94,32 +91,18 @@ func (c Client) get(ctx context.Context, requestURL string) (_ *url.URL, _ []byt
 	if u, err := url.Parse(requestURL); err == nil && u.Fragment != "" {
 		if keyvals, err := url.ParseQuery(u.Fragment); err == nil {
 			for key, vals := range keyvals {
-				var sum []byte
 				for _, val := range vals {
-					switch key {
-					case "md5":
-						_sum := md5.Sum(content)
-						sum = _sum[:]
-					case "sha1":
-						_sum := sha1.Sum(content)
-						sum = _sum[:]
-					case "sha224":
-						_sum := sha256.Sum224(content)
-						sum = _sum[:]
-					case "sha256":
-						_sum := sha256.Sum256(content)
-						sum = _sum[:]
-					case "sha384":
-						_sum := sha512.Sum384(content)
-						sum = _sum[:]
-					case "sha512":
-						_sum := sha512.Sum512(content)
-						sum = _sum[:]
+					newHasher := python.HashlibAlgorithmsGuaranteed[key]
+					if newHasher == nil {
+						continue
 					}
-					if sum != nil && hex.EncodeToString(sum) != val {
+					hasher := newHasher()
+					hasher.Write(content)
+					sum := hex.EncodeToString(hasher.Sum(nil))
+					if sum != val {
 						//nolint:lll // error string
 						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s",
-							key, val, hex.EncodeToString(sum))
+							key, val, sum)
 					}
 				}
 			}
