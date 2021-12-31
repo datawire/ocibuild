@@ -8,10 +8,11 @@ import (
 )
 
 type fsfile struct {
-	name     string
+	name     string // basename
 	parent   *fsfile
 	children map[string]*fsfile
 
+	// if header is nil, that implies that this is a directory
 	header *tar.Header
 	body   []byte
 }
