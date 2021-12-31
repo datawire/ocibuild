@@ -10,13 +10,13 @@ import (
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func loadLayers(layers []ociv1.Layer) (*fsfile, error) {
+func loadLayers(layers []ociv1.Layer, omitContent bool) (*fsfile, error) {
 	root := &fsfile{ //nolint:exhaustivestruct
 		name: ".",
 	}
 	// Apply all the layers
 	for _, layer := range layers {
-		layerFS, err := parseLayer(layer)
+		layerFS, err := parseLayer(layer, omitContent)
 		if err != nil {
 			return nil, err
 		}
@@ -38,7 +38,7 @@ func loadLayers(layers []ociv1.Layer) (*fsfile, error) {
 //  2. Squash properly implements "opaque whiteouts", which go-containerregistry doesn't support.
 func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
 	// Load the layers.
-	root, err := loadLayers(layers)
+	root, err := loadLayers(layers, false)
 	if err != nil {
 		return nil, err
 	}

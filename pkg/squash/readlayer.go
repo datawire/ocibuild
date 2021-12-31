@@ -25,7 +25,7 @@ type layerFS struct {
 // consistent querying:
 //
 //  - Paths are always path.Clean()'d (notably, directories do NOT contain trailing "/").
-func parseLayer(layer ociv1.Layer) (*layerFS, error) {
+func parseLayer(layer ociv1.Layer, omitContent bool) (*layerFS, error) {
 	lfs := new(layerFS)
 	layerReader, err := layer.Uncompressed()
 	if err != nil {
@@ -48,9 +48,17 @@ func parseLayer(layer ociv1.Layer) (*layerFS, error) {
 		}
 		header.Name = cleanName
 
-		body, err := io.ReadAll(tarReader)
-		if err != nil {
-			return nil, fmt.Errorf("reading tar: %w", err)
+		var body []byte
+		if omitContent {
+			// #nosec G110 -- mitigated with io.Discard
+			if _, err := io.Copy(io.Discard, tarReader); err != nil {
+				return nil, fmt.Errorf("reading tar: %w", err)
+			}
+		} else {
+			body, err = io.ReadAll(tarReader)
+			if err != nil {
+				return nil, fmt.Errorf("reading tar: %w", err)
+			}
 		}
 		entry := fileEntry{
 			Header: header,
