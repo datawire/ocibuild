@@ -1,4 +1,6 @@
 // Package squash deals with squashing multiple layers together in to a single layer.
+//
+// https://github.com/opencontainers/image-spec/blob/main/layer.md
 package squash
 
 import (
@@ -14,6 +16,7 @@ func loadLayers(layers []ociv1.Layer, omitContent bool) (*fsfile, error) {
 	root := &fsfile{ //nolint:exhaustivestruct
 		name: ".",
 	}
+	root.parent = root
 	// Apply all the layers
 	for _, layer := range layers {
 		layerFS, err := parseLayer(layer, omitContent)
@@ -21,10 +24,22 @@ func loadLayers(layers []ociv1.Layer, omitContent bool) (*fsfile, error) {
 			return nil, err
 		}
 		for _, wh := range layerFS.WhiteoutMarkers {
-			fsGet(root, wh.Header.Name).Set(wh.Header, wh.Body)
+			vfsFile, err := fsGet(root, wh.Header.Name, true, false)
+			if err != nil {
+				return nil, err
+			}
+			if err := vfsFile.Set(wh.Header, wh.Body); err != nil {
+				return nil, err
+			}
 		}
 		for _, file := range layerFS.Files {
-			fsGet(root, file.Header.Name).Set(file.Header, file.Body)
+			vfsFile, err := fsGet(root, file.Header.Name, true, false)
+			if err != nil {
+				return nil, err
+			}
+			if err := vfsFile.Set(file.Header, file.Body); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return root, nil
@@ -46,7 +61,7 @@ func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer
 	// Generate the layer tarball
 	var byteWriter bytes.Buffer
 	tarWriter := tar.NewWriter(&byteWriter)
-	if err := root.WriteTo(".", tarWriter); err != nil {
+	if err := root.WriteTo(tarWriter); err != nil {
 		return nil, err
 	}
 	if err := tarWriter.Close(); err != nil {

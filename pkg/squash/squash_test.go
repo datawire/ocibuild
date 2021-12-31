@@ -275,6 +275,27 @@ func TestSquash(t *testing.T) {
 				{Name: "tgtdir/file", Type: tar.TypeReg},
 			},
 		},
+		"overwrite-links": {
+			Input: []TestLayer{
+				{
+					{Name: "bin", Type: tar.TypeDir},
+					{Name: "bin/busybox", Type: tar.TypeReg},
+					{Name: "bin/wget", Type: tar.TypeSymlink, Linkname: "busybox"},
+				},
+				{
+					{Name: "bin/busybox", Type: tar.TypeChar},
+					{Name: "bin/wget", Type: tar.TypeSymlink, Linkname: "busybox"},
+				},
+				{
+					{Name: "bin/busybox", Type: tar.TypeBlock},
+				},
+			},
+			Output: TestLayer{
+				{Name: "bin/", Type: tar.TypeDir},
+				{Name: "bin/busybox", Type: tar.TypeBlock},
+				{Name: "bin/wget", Type: tar.TypeSymlink, Linkname: "busybox"},
+			},
+		},
 	}
 
 	for tcName, tc := range testcases {

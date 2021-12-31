@@ -2,13 +2,20 @@ package squash
 
 import (
 	"archive/tar"
+	"io/fs"
 	"path"
 	"sort"
 	"strings"
+	"syscall"
+)
+
+var (
+	ErrLoop   = syscall.ELOOP
+	ErrNotDir = syscall.ENOTDIR
 )
 
 type fsfile struct {
-	name     string // basename
+	name     string // io/fs fullname
 	parent   *fsfile
 	children map[string]*fsfile
 
@@ -17,33 +24,40 @@ type fsfile struct {
 	body   []byte
 }
 
-func fsGet(dir *fsfile, pathname string) *fsfile {
+func fsGet(dir *fsfile, pathname string, create, followLinks bool) (*fsfile, error) {
 	pathname = path.Clean(pathname)
+
+	done := 0 // index of the next byte in pathname to look at
 
 	// handle absolute paths
 	if path.IsAbs(pathname) {
-		for dir.parent != nil {
+		for dir.parent != dir {
 			dir = dir.parent
 		}
-		pathname = pathname[1:]
+		done++
 	}
 
 	// crawl the tree
 	for {
-		slash := strings.Index(pathname, "/")
+		slash := strings.Index(pathname[done:], "/")
 		if slash < 0 {
 			break
 		}
-		dir = dir.Get(pathname[:slash])
-		if dir == nil {
-			return nil
+		var err error
+		dir, err = dir.Get(pathname[done:done+slash], create, false)
+		done += slash + 1
+		if err != nil {
+			return nil, err
 		}
-		pathname = pathname[slash+1:]
 	}
-	return dir.Get(pathname)
+	ret, err := dir.Get(pathname[done:], create, followLinks)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
-func (f *fsfile) Get(child string) *fsfile {
+func (f *fsfile) Get(child string, create, followLinks bool) (*fsfile, error) {
 	var ret *fsfile
 
 	switch child {
@@ -52,23 +66,47 @@ func (f *fsfile) Get(child string) *fsfile {
 	case ".":
 		ret = f
 	default:
+		if f.header != nil && f.header.Typeflag == tar.TypeSymlink {
+			newF, err := fsGet(f.parent, f.header.Linkname, create, true)
+			if err != nil {
+				return nil, &fs.PathError{
+					Op:   "vfs.readlink(dir)",
+					Path: "/" + f.name,
+					Err:  err,
+				}
+			}
+			f = newF
+		}
 		// Accessing "foo/bar" implies that "foo" is a directory; if it isn't, then white it
 		// out.
 		if f.header != nil && f.header.Typeflag != tar.TypeDir {
+			if !create {
+				return nil, &fs.PathError{
+					Op:   "vfs.readdir",
+					Path: "/" + f.name,
+					Err:  ErrNotDir,
+				}
+			}
 			f.header = nil
 			f.body = nil
-			f.Get(".wh..wh..opq").Set(&tar.Header{
+			whFile, err := f.Get(".wh..wh..opq", true, true)
+			if err != nil {
+				return nil, err
+			}
+			if err := whFile.Set(&tar.Header{
 				Typeflag: tar.TypeReg,
 				Mode:     0o644,
-			}, nil)
+			}, nil); err != nil {
+				return nil, err
+			}
 		}
 		// Look up the child
 		if f.children == nil {
 			f.children = make(map[string]*fsfile)
 		}
-		if _, ok := f.children[child]; !ok {
+		if _, ok := f.children[child]; create && !ok {
 			f.children[child] = &fsfile{ //nolint:exhaustivestruct
-				name:   child,
+				name:   path.Join(f.name, child),
 				parent: f,
 			}
 		}
@@ -76,8 +114,24 @@ func (f *fsfile) Get(child string) *fsfile {
 	}
 
 	// Resolve symlinks
-	for ret != nil && ret.header != nil && ret.header.Typeflag == tar.TypeSymlink {
-		target := fsGet(f, ret.header.Linkname)
+	stack := make(map[*fsfile]struct{})
+	for followLinks && ret != nil && ret.header != nil && ret.header.Typeflag == tar.TypeSymlink {
+		if _, loop := stack[ret]; loop {
+			return nil, &fs.PathError{
+				Op:   "vfs.readlink",
+				Path: "/" + ret.name,
+				Err:  ErrLoop,
+			}
+		}
+		stack[ret] = struct{}{}
+		target, err := fsGet(ret.parent, ret.header.Linkname, create, false)
+		if err != nil {
+			return nil, &fs.PathError{
+				Op:   "vfs.readlink",
+				Path: "/" + ret.name,
+				Err:  err,
+			}
+		}
 		if target == nil {
 			break
 		}
@@ -85,10 +139,17 @@ func (f *fsfile) Get(child string) *fsfile {
 	}
 
 	// Return
-	return ret
+	if ret == nil {
+		return nil, &fs.PathError{
+			Op:   "vfs.get",
+			Path: "/" + path.Join(f.name, child),
+			Err:  fs.ErrNotExist,
+		}
+	}
+	return ret, nil
 }
 
-func (f *fsfile) Set(hdr *tar.Header, body []byte) {
+func (f *fsfile) Set(hdr *tar.Header, body []byte) error {
 	if hdr != nil {
 		_hdr := *hdr
 		hdr = &_hdr
@@ -109,30 +170,37 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 		// make a potential previous implicit whiteout explicit.  I say "potential" because
 		// without the entire layer stack (which this function explicitly doesn't require),
 		// we can't know if any given file was such a dir-to-non-dir conversion.
-		f.Get(".wh..wh..opq").Set(&tar.Header{
+		whFile, err := f.Get(".wh..wh..opq", true, true)
+		if err != nil {
+			return err
+		}
+		if err := whFile.Set(&tar.Header{
 			Typeflag: tar.TypeReg,
 			Mode:     0o644,
-		}, nil)
+		}, nil); err != nil {
+			return err
+		}
 	}
 	if f.parent != nil {
-		if strings.HasPrefix(f.name, ".wh.") {
-			if f.name == ".wh..wh..opq" {
+		if basename := path.Base(f.name); strings.HasPrefix(basename, ".wh.") {
+			if basename == ".wh..wh..opq" {
 				for k := range f.parent.children {
-					if k != f.name {
+					if k != basename {
 						delete(f.parent.children, k)
 					}
 				}
 			} else {
-				delete(f.parent.children, strings.TrimPrefix(f.name, ".wh."))
+				delete(f.parent.children, strings.TrimPrefix(basename, ".wh."))
 			}
 		} else {
-			delete(f.parent.children, ".wh."+f.name)
+			delete(f.parent.children, ".wh."+basename)
 		}
 	}
+	return nil
 }
 
-func (f *fsfile) WriteTo(basedir string, tarWriter *tar.Writer) error {
-	name := path.Join(basedir, f.name)
+func (f *fsfile) WriteTo(tarWriter *tar.Writer) error {
+	name := f.name
 
 	if f.header != nil {
 		if f.header.Typeflag == tar.TypeDir {
@@ -168,7 +236,7 @@ func (f *fsfile) WriteTo(basedir string, tarWriter *tar.Writer) error {
 
 	for _, childName := range childNames {
 		child := f.children[childName]
-		if err := child.WriteTo(name, tarWriter); err != nil {
+		if err := child.WriteTo(tarWriter); err != nil {
 			return err
 		}
 	}
