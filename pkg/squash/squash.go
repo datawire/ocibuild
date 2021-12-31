@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
+	"io/fs"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -73,4 +74,13 @@ func Squash(layers []ociv1.Layer, opts ...ociv1tarball.LayerOption) (ociv1.Layer
 	return ociv1tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return io.NopCloser(bytes.NewReader(byteSlice)), nil
 	}, opts...)
+}
+
+// Load multiple layers as a filesystem.
+func Load(layers []ociv1.Layer, omitContent bool) (fs.FS, error) {
+	root, err := loadLayers(layers, omitContent)
+	if err != nil {
+		return nil, err
+	}
+	return root, nil
 }

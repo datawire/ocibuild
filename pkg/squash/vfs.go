@@ -1,3 +1,6 @@
+// vfs.go implements a virtual filesystem layer that we extract layer contents in to, in order to
+// squash layers together without needing to hit a real filesystem.
+
 package squash
 
 import (
