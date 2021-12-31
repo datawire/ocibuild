@@ -3,14 +3,23 @@ package squash_test
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
+	"github.com/datawire/dlib/dexec"
+	"github.com/datawire/dlib/dlog"
+	"github.com/google/go-containerregistry/pkg/name"
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/datawire/ocibuild/pkg/dockerutil"
 	"github.com/datawire/ocibuild/pkg/squash"
 )
 
@@ -18,6 +27,9 @@ type TestFile struct {
 	Name     string
 	Type     byte
 	Linkname string
+
+	NoDocker   bool
+	NoOCIBuild bool
 }
 
 type TestLayer []TestFile
@@ -48,7 +60,7 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 			t.Fatal(err)
 		}
 
-		ret = append(ret, TestFile{
+		ret = append(ret, TestFile{ //nolint:exhaustivestruct
 			Name:     header.Name,
 			Type:     header.Typeflag,
 			Linkname: header.Linkname,
@@ -114,9 +126,9 @@ func TestSquash(t *testing.T) {
 				},
 			},
 			Output: TestLayer{
-				{Name: "./", Type: tar.TypeDir},
+				{Name: "./", Type: tar.TypeDir, NoDocker: true},
 				{Name: "foo/", Type: tar.TypeDir},
-				{Name: "foo/.wh.qux", Type: tar.TypeReg},
+				{Name: "foo/.wh.qux", Type: tar.TypeReg, NoDocker: true},
 				{Name: "foo/.aaa", Type: tar.TypeReg},
 				{Name: "foo/bar", Type: tar.TypeReg},
 				{Name: "foo/baz", Type: tar.TypeReg},
@@ -137,7 +149,8 @@ func TestSquash(t *testing.T) {
 				},
 			},
 			Output: TestLayer{
-				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				{Name: "dir/", Type: tar.TypeDir, NoOCIBuild: true},
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg, NoDocker: true},
 				{Name: "dir/bar", Type: tar.TypeReg},
 			},
 		},
@@ -154,7 +167,7 @@ func TestSquash(t *testing.T) {
 				},
 			},
 			Output: TestLayer{
-				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg, NoDocker: true},
 				{Name: "dir/bar", Type: tar.TypeReg},
 			},
 		},
@@ -172,10 +185,10 @@ func TestSquash(t *testing.T) {
 			},
 			Output: TestLayer{
 				{Name: "dir/", Type: tar.TypeDir},
-				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg},
+				{Name: "dir/.wh..wh..opq", Type: tar.TypeReg, NoDocker: true},
 			},
 		},
-		"symlink-1": {
+		"symlink-to-file": {
 			Input: []TestLayer{
 				{
 					{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
@@ -185,11 +198,10 @@ func TestSquash(t *testing.T) {
 				},
 			},
 			Output: TestLayer{
-				{Name: "bar", Type: tar.TypeReg},
-				{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+				{Name: "foo", Type: tar.TypeReg},
 			},
 		},
-		"symlink-2": {
+		"symlink-to-symlink": {
 			Input: []TestLayer{
 				{
 					{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
@@ -199,55 +211,68 @@ func TestSquash(t *testing.T) {
 				},
 			},
 			Output: TestLayer{
-				{Name: "bar", Type: tar.TypeSymlink, Linkname: "baz"},
-				{Name: "foo", Type: tar.TypeSymlink, Linkname: "bar"},
+				{Name: "foo", Type: tar.TypeSymlink, Linkname: "baz"},
 			},
 		},
-		"symlink-3": {
+		"symlink-in-dir-simple": {
+			Input: []TestLayer{
+				{
+					{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "tgtdir"},
+					{Name: "tgtdir", Type: tar.TypeDir},
+					{Name: "lnkdir/file", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "tgtdir"},
+				{Name: "tgtdir/", Type: tar.TypeDir},
+				{Name: "tgtdir/file", Type: tar.TypeReg},
+			},
+		},
+		"symlink-in-dir-dne": {
+			Input: []TestLayer{
+				{
+					{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "tgtdir"}, // does not exist
+					{Name: "lnkdir/file", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "tgtdir"},
+				{Name: "tgtdir/", Type: tar.TypeDir, NoOCIBuild: true},
+				{Name: "tgtdir/file", Type: tar.TypeReg},
+			},
+		},
+		"symlink-in-dir-outside": {
+			Input: []TestLayer{
+				{
+					{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "../tgtdir"}, // outside of image
+					{Name: "tgtdir", Type: tar.TypeDir},
+				},
+				{
+					{Name: "lnkdir/file", Type: tar.TypeReg},
+				},
+			},
+			Output: TestLayer{
+				{Name: "lnkdir", Type: tar.TypeSymlink, Linkname: "../tgtdir"},
+				{Name: "tgtdir/", Type: tar.TypeDir},
+				{Name: "tgtdir/file", Type: tar.TypeReg},
+			},
+		},
+		"symlink-in-dir-absolute": {
 			Input: []TestLayer{
 				{
 					{Name: "dir", Type: tar.TypeDir},
-					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../tgt"},
+					{Name: "dir/lnkdir", Type: tar.TypeSymlink, Linkname: "/tgtdir"}, // absolute
+					{Name: "tgtdir", Type: tar.TypeDir},
 				},
 				{
-					{Name: "dir/lnk", Type: tar.TypeReg},
+					{Name: "dir/lnkdir/file", Type: tar.TypeReg},
 				},
 			},
 			Output: TestLayer{
 				{Name: "dir/", Type: tar.TypeDir},
-				{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../tgt"},
-				{Name: "tgt", Type: tar.TypeReg},
-			},
-		},
-		"symlink-4": {
-			Input: []TestLayer{
-				{
-					{Name: "dir", Type: tar.TypeDir},
-					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "../../tgt"}, // outside of image
-				},
-				{
-					{Name: "dir/lnk", Type: tar.TypeReg},
-				},
-			},
-			Output: TestLayer{
-				{Name: "dir/", Type: tar.TypeDir},
-				{Name: "dir/lnk", Type: tar.TypeReg},
-			},
-		},
-		"symlink-5": {
-			Input: []TestLayer{
-				{
-					{Name: "dir", Type: tar.TypeDir},
-					{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "/tgt"},
-				},
-				{
-					{Name: "dir/lnk", Type: tar.TypeReg},
-				},
-			},
-			Output: TestLayer{
-				{Name: "dir/", Type: tar.TypeDir},
-				{Name: "dir/lnk", Type: tar.TypeSymlink, Linkname: "/tgt"},
-				{Name: "tgt", Type: tar.TypeReg},
+				{Name: "dir/lnkdir", Type: tar.TypeSymlink, Linkname: "/tgtdir"},
+				{Name: "tgtdir/", Type: tar.TypeDir},
+				{Name: "tgtdir/file", Type: tar.TypeReg},
 			},
 		},
 	}
@@ -262,12 +287,107 @@ func TestSquash(t *testing.T) {
 				input = append(input, l.ToLayer(t))
 			}
 
-			actual, err := squash.Squash(input)
-			if !assert.NoError(t, err) {
-				return
-			}
+			t.Run("ocibuild", func(t *testing.T) { // to test the code
+				t.Parallel()
 
-			assert.Equal(t, tc.Output, ParseTestLayer(t, actual))
+				var expected TestLayer
+				for _, file := range tc.Output {
+					if file.NoOCIBuild {
+						continue
+					}
+					file.NoDocker = false
+					file.NoOCIBuild = false
+					expected = append(expected, file)
+				}
+
+				actual, err := squash.Squash(input)
+				require.NoError(t, err)
+				assert.Equal(t, expected, ParseTestLayer(t, actual))
+			})
+			t.Run("docker", func(t *testing.T) { // to test the testcase itself
+				t.Parallel()
+
+				var expected TestLayer
+				for _, file := range tc.Output {
+					if file.NoDocker {
+						continue
+					}
+					file.NoDocker = false
+					file.NoOCIBuild = false
+					expected = append(expected, file)
+				}
+
+				actual := dockerSquash(t, input)
+				assert.Equal(t, expected, actual)
+			})
 		})
 	}
+}
+
+func dockerSquash(t *testing.T, layers []ociv1.Layer) TestLayer { //nolint:thelper // useful in trace
+	ctx := dlog.NewTestContext(t, true)
+
+	img, err := mutate.AppendLayers(empty.Image, layers...)
+	require.NoError(t, err)
+
+	ran := false
+	var layer ociv1.Layer
+	err = dockerutil.WithImage(ctx, "squash-test", img, func(ctx context.Context, tag name.Tag) (err error) {
+		ran = true
+		maybeSetErr := func(_err error) {
+			if _err != nil && err == nil {
+				err = _err
+			}
+		}
+		bs, err := dexec.CommandContext(ctx, "docker", "container", "create", tag.String(), "/bin/sh").Output()
+		if err != nil {
+			return err
+		}
+		containerName := strings.TrimSpace(string(bs))
+		defer func() {
+			maybeSetErr(dexec.CommandContext(ctx, "docker", "container", "rm", containerName).Run())
+		}()
+
+		cmd := dexec.CommandContext(ctx, "docker", "container", "export", containerName)
+		pipe, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		defer func() {
+			_ = pipe.Close()
+			_ = cmd.Wait()
+		}()
+		layer, err = ociv1tarball.LayerFromReader(pipe)
+		if err != nil {
+			return err
+		}
+		if err := pipe.Close(); err != nil {
+			return err
+		}
+		if err := cmd.Wait(); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if !ran {
+		t.Log("don't have a functioning docker")
+		t.SkipNow()
+	}
+	require.NoError(t, err)
+	var ret TestLayer //nolint:prealloc // 'continue' is likely
+	for _, file := range ParseTestLayer(t, layer) {
+		if strings.HasPrefix(file.Name, "dev/") ||
+			strings.HasPrefix(file.Name, "proc/") ||
+			strings.HasPrefix(file.Name, "sys/") ||
+			strings.HasPrefix(file.Name, "etc/") ||
+			file.Name == ".dockerenv" {
+			continue
+		}
+		ret = append(ret, file)
+	}
+	return ret
 }
