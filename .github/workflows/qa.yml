@@ -1,9 +1,10 @@
-name: quality-assurance
+name: Quality Assurance
 on:
   - push
   - pull_request
 jobs:
   check:
+    name: "${{ github.event_name }} / check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -29,6 +30,7 @@ jobs:
           make tools/bin/goveralls &&
           tools/bin/goveralls -coverprofile=ocibuild.cov -service=github
   lint:
+    name: "${{ github.event_name }} / lint"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -37,6 +39,7 @@ jobs:
           go-version: '~1.17.0'
       - run: make lint
   generate:
+    name: "${{ github.event_name }} / generate"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -52,3 +55,14 @@ jobs:
             PAGER= git diff --cached
             exit 1
           fi
+  pass:
+    name: "${{ github.event_name }} / pass"
+    runs-on: ubuntu-latest
+    needs:
+      - check
+      - lint
+      - generate
+    steps:
+      - name: No-Op
+        if: ${{ false }}
+        run: "echo Pass"
