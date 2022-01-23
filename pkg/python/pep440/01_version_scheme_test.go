@@ -16,6 +16,11 @@ import (
 
 func TestSort(t *testing.T) {
 	t.Parallel()
+	// This test sorts a list of version in order to check that .Cmp compares them correctly.
+	//
+	// DON'T GET THE LIST ITEMS OUT OF ORDER; the testcase inputs are in correctly-sorted order;
+	// the test works by shuffling the list then sorting it and checking that this matches the
+	// ordering of the original input list.
 	testcases := map[string][]string{
 		// from the spec
 		"final-releases-1": []string{
@@ -157,6 +162,7 @@ func TestSort(t *testing.T) {
 			t.Parallel()
 			rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 
+			// Parse the slice of strings in to a slice of parsed Version objects.
 			vers := make([]*pep440.Version, 0, len(strs))
 			exps := make([]string, 0, len(strs))
 			for _, str := range strs {
@@ -167,14 +173,18 @@ func TestSort(t *testing.T) {
 				exps = append(exps, ver.String())
 			}
 
-			// shuffle the list so that `sort` has something to do.
+			// Shuffle the list so that `sort` has something to do.
 			rand.Shuffle(len(vers), func(i, j int) {
 				vers[i], vers[j] = vers[j], vers[i]
 			})
 
+			// Sort the list.
 			sort.Slice(vers, func(i, j int) bool {
 				return vers[i].Cmp(*vers[j]) < 1
 			})
+
+			// Check that the ordering of the sorted list matches the original input
+			// list.
 			acts := make([]string, 0, len(strs))
 			for _, ver := range vers {
 				acts = append(acts, ver.String())
