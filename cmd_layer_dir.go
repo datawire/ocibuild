@@ -13,6 +13,7 @@ import (
 
 func init() {
 	var flagPrefix dir.Prefix
+	var flagChOwn dir.Ownership
 	cmd := &cobra.Command{
 		Use:   "dir [flags] IN_DIRNAME >OUT_LAYERFILE",
 		Short: "Create a layer from a directory",
@@ -22,7 +23,7 @@ func init() {
 			if flagPrefix.DirName != "" {
 				prefix = &flagPrefix
 			}
-			layer, err := dir.LayerFromDir(args[0], prefix, reproducible.Now())
+			layer, err := dir.LayerFromDir(args[0], prefix, &flagChOwn, reproducible.Now())
 			if err != nil {
 				return err
 			}
@@ -33,6 +34,7 @@ func init() {
 			return nil
 		},
 	}
+	// synthetic prefix
 	cmd.Flags().StringVar(&flagPrefix.DirName, "prefix", "", ``+
 		`Add a `+"`PREFIX`"+` to the filenames in the directory, should be forward-slash `+
 		`separated and should be absolute but NOT starting with a slash.  For example, `+
@@ -45,5 +47,15 @@ func init() {
 		`The numeric group ID of the --prefix directory`)
 	cmd.Flags().StringVar(&flagPrefix.GName, "prefix-gname", "root",
 		`The symbolic group name of the --prefix directory`)
+	// actual files
+	cmd.Flags().IntVar(&flagChOwn.UID, "chown-uid", -1,
+		"Force the numeric user ID of read files to be `UID`; a value of <0 uses the actual UID")
+	cmd.Flags().StringVar(&flagChOwn.UName, "chown-uname", "",
+		"Force symbolic user name of the read files to be `uname`; an empty value uses the user name")
+	cmd.Flags().IntVar(&flagChOwn.GID, "chown-gid", -1,
+		"Force the numeric group ID of read files to be `GID`; use a value <0 to use the actual GID")
+	cmd.Flags().StringVar(&flagChOwn.GName, "chown-gname", "root",
+		"Force symbolic group name of the read files to be `gname`; an empty value uses the actual group name")
+
 	argparserLayer.AddCommand(cmd)
 }
