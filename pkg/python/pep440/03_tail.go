@@ -601,11 +601,11 @@ func parseVersion(str string) (*Version, error) {
 		return nil, fmt.Errorf("invalid version: %q", str)
 	}
 
-	var v Version
+	var ver Version
 	var err error
 
 	if epoch := m[reVersion.SubexpIndex("epoch")]; epoch != "" {
-		v.Epoch, err = strconv.Atoi(epoch)
+		ver.Epoch, err = strconv.Atoi(epoch)
 		if err != nil {
 			return nil, err
 		}
@@ -616,7 +616,7 @@ func parseVersion(str string) (*Version, error) {
 		if err != nil {
 			return nil, err
 		}
-		v.Release = append(v.Release, segInt)
+		ver.Release = append(ver.Release, segInt)
 	}
 
 	type letterNumber struct {
@@ -674,10 +674,7 @@ func parseVersion(str string) (*Version, error) {
 		return nil, fmt.Errorf("pre-release: %w", err)
 	}
 	if pre != nil {
-		v.Pre = &struct {
-			L string
-			N int
-		}{
+		ver.Pre = &PreRelease{
 			L: pre.L,
 			N: pre.N,
 		}
@@ -693,7 +690,7 @@ func parseVersion(str string) (*Version, error) {
 		return nil, fmt.Errorf("post-release: %w", err)
 	}
 	if post != nil {
-		v.Post = &post.N
+		ver.Post = &post.N
 	}
 
 	dev, err := parseLetterNumber(
@@ -706,17 +703,17 @@ func parseVersion(str string) (*Version, error) {
 		return nil, fmt.Errorf("dev: %w", err)
 	}
 	if dev != nil {
-		v.Dev = &dev.N
+		ver.Dev = &dev.N
 	}
 
 	localParts := strings.FieldsFunc(m[reVersion.SubexpIndex("local")], func(r rune) bool {
 		return strings.ContainsRune("-_.", r)
 	})
 	for _, part := range localParts {
-		v.Local = append(v.Local, intstr.Parse(strings.ToLower(part)))
+		ver.Local = append(ver.Local, intstr.Parse(strings.ToLower(part)))
 	}
 
-	return &v, nil
+	return &ver, nil
 }
 
 //

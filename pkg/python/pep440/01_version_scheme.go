@@ -46,11 +46,11 @@ type Version = LocalVersion
 
 // ParseVersion parses a string to a Version object, performing normalization.
 func ParseVersion(str string) (*Version, error) {
-	v, err := parseVersion(str) // the routine from Appendix B
+	ver, err := parseVersion(str) // the routine from Appendix B
 	if err != nil {
 		return nil, fmt.Errorf("pep440.ParseVersion: %w", err)
 	}
-	return v, nil
+	return ver, nil
 }
 
 //
@@ -63,39 +63,62 @@ type PublicVersion struct {
 	// * Release segment: ``N(.N)*``
 	Release []int
 	// * Pre-release segment: ``{a|b|rc}N``
-	Pre *struct {
-		L string
-		N int
-	}
+	Pre *PreRelease
 	// * Post-release segment: ``.postN``
 	Post *int
 	// * Development release segment: ``.devN``
 	Dev *int
 }
 
-func (v PublicVersion) writeTo(ret *strings.Builder) {
-	if v.Epoch > 0 {
-		fmt.Fprintf(ret, "%d!", v.Epoch)
+type PreRelease struct {
+	L string
+	N int
+}
+
+// GoString implements fmt.GoStringer.
+func (ver PublicVersion) GoString() string {
+	pre := "nil"
+	if ver.Pre != nil {
+		pre = fmt.Sprintf("&%#v", *ver.Pre)
 	}
-	fmt.Fprintf(ret, "%d", v.Release[0])
-	for _, segment := range v.Release[1:] {
+	post := "nil"
+	if ver.Post != nil {
+		post = fmt.Sprintf("intPtr(%#v)", *ver.Post)
+	}
+	dev := "nil"
+	if ver.Dev != nil {
+		dev = fmt.Sprintf("intPtr(%#v)", *ver.Dev)
+	}
+	return fmt.Sprintf("pep440.PublicVersion{Epoch:%d, Release:%#v, Pre:%s, Post:%s, Dev:%s}",
+		ver.Epoch, ver.Release, pre, post, dev)
+}
+
+func (ver PublicVersion) writeTo(ret *strings.Builder) {
+	if ver.Epoch > 0 {
+		fmt.Fprintf(ret, "%d!", ver.Epoch)
+	}
+	if len(ver.Release) == 0 {
+		panic("invalid version: no release segments")
+	}
+	fmt.Fprintf(ret, "%d", ver.Release[0])
+	for _, segment := range ver.Release[1:] {
 		fmt.Fprintf(ret, ".%d", segment)
 	}
-	if v.Pre != nil {
-		fmt.Fprintf(ret, "%s%d", v.Pre.L, v.Pre.N)
+	if ver.Pre != nil {
+		fmt.Fprintf(ret, "%s%d", ver.Pre.L, ver.Pre.N)
 	}
-	if v.Post != nil {
-		fmt.Fprintf(ret, ".post%d", *v.Post)
+	if ver.Post != nil {
+		fmt.Fprintf(ret, ".post%d", *ver.Post)
 	}
-	if v.Dev != nil {
-		fmt.Fprintf(ret, ".dev%d", *v.Dev)
+	if ver.Dev != nil {
+		fmt.Fprintf(ret, ".dev%d", *ver.Dev)
 	}
 }
 
 // String implements fmt.Stringer.  String does not perform any normalization.
-func (v PublicVersion) String() string {
+func (ver PublicVersion) String() string {
 	var ret strings.Builder
-	v.writeTo(&ret)
+	ver.writeTo(&ret)
 	return ret.String()
 }
 
@@ -167,12 +190,18 @@ type LocalVersion struct {
 	Local []intstr.IntOrString
 }
 
+// GoString implements fmt.GoStringer.
+func (ver LocalVersion) GoString() string {
+	return fmt.Sprintf("pep440.LocalVersion{PublicVersion:%#v, Local:%#v}",
+		ver.PublicVersion, ver.Local)
+}
+
 // String implements fmt.Stringer.  String does not perform any normalization.
-func (v LocalVersion) String() string {
+func (ver LocalVersion) String() string {
 	var ret strings.Builder
-	v.PublicVersion.writeTo(&ret)
+	ver.PublicVersion.writeTo(&ret)
 	sep := "+"
-	for _, local := range v.Local {
+	for _, local := range ver.Local {
 		ret.WriteString(sep)
 		ret.WriteString(local.String())
 		sep = "."
@@ -195,7 +224,7 @@ func cmpLocalSegment(a, b *intstr.IntOrString) int {
 	// handle one or both of them being nil
 	switch {
 	case a == nil && b == nil:
-		return 0
+		panic("should not happen: cmpLocal shouldn't have bothered calling this")
 	case a == nil && b != nil:
 		return -1
 	case a != nil && b == nil:
@@ -212,10 +241,12 @@ func cmpLocalSegment(a, b *intstr.IntOrString) int {
 			return 1
 		}
 		return 0
-	case a.Type == intstr.Int:
+	case a.Type == intstr.Int && b.Type == intstr.String:
 		return 1
-	default:
+	case a.Type == intstr.String && b.Type == intstr.Int:
 		return -1
+	default:
+		panic("should not happen: invalid intstr.IntOrString")
 	}
 }
 
@@ -272,12 +303,12 @@ func (a LocalVersion) Cmp(b LocalVersion) int {
 // A version identifier that consists solely of a release segment and optionally
 // an epoch identifier is termed a "final release".
 
-func (v PublicVersion) IsFinal() bool {
-	return v.Pre == nil && v.Post == nil && v.Dev == nil
+func (ver PublicVersion) IsFinal() bool {
+	return ver.Pre == nil && ver.Post == nil && ver.Dev == nil
 }
 
-func (v LocalVersion) IsFinal() bool {
-	return v.PublicVersion.IsFinal() && len(v.Local) == 0
+func (ver LocalVersion) IsFinal() bool {
+	return ver.PublicVersion.IsFinal() && len(ver.Local) == 0
 }
 
 //
@@ -295,9 +326,9 @@ func (v LocalVersion) IsFinal() bool {
 // segments with different numbers of components, the shorter segment is
 // padded out with additional zeros as necessary.
 
-func (v PublicVersion) releaseSegment(n int) int {
-	if n < len(v.Release) {
-		return v.Release[n]
+func (ver PublicVersion) releaseSegment(n int) int {
+	if n < len(ver.Release) {
+		return ver.Release[n]
 	}
 	return 0
 }
@@ -316,9 +347,9 @@ func cmpRelease(a, b PublicVersion) int {
 // under this scheme, the most common variants are to use two components
 // ("major.minor") or three components ("major.minor.micro").
 
-func (v PublicVersion) Major() int { return v.releaseSegment(0) }
-func (v PublicVersion) Minor() int { return v.releaseSegment(1) }
-func (v PublicVersion) Micro() int { return v.releaseSegment(2) }
+func (ver PublicVersion) Major() int { return ver.releaseSegment(0) }
+func (ver PublicVersion) Minor() int { return ver.releaseSegment(1) }
+func (ver PublicVersion) Micro() int { return ver.releaseSegment(2) }
 
 //
 // For example::
@@ -391,25 +422,26 @@ func (v PublicVersion) Micro() int { return v.releaseSegment(2) }
 //
 //
 
+var preReleaseOrder = map[string]int{
+	"a":     -3,
+	"alpha": -3,
+
+	"b":    -2,
+	"beta": -2,
+
+	"rc":      -1,
+	"c":       -1,
+	"pre":     -1,
+	"preview": -1,
+
+	// absent: 0,
+}
+
 func cmpPreRelease(a, b PublicVersion) int {
-	order := map[string]int{
-		"a":     -3,
-		"alpha": -3,
-
-		"b":    -2,
-		"beta": -2,
-
-		"rc":      -1,
-		"c":       -1,
-		"pre":     -1,
-		"preview": -1,
-
-		// absent: 0,
-	}
 	var aL, aN, bL, bN int
 	var ok bool
 	if a.Pre != nil {
-		aL, ok = order[a.Pre.L]
+		aL, ok = preReleaseOrder[a.Pre.L]
 		if !ok {
 			panic(fmt.Errorf("invalid pre-release string: %q", a.Pre.L))
 		}
@@ -418,7 +450,7 @@ func cmpPreRelease(a, b PublicVersion) int {
 		aL = -4
 	}
 	if b.Pre != nil {
-		bL, ok = order[b.Pre.L]
+		bL, ok = preReleaseOrder[b.Pre.L]
 		if !ok {
 			panic(fmt.Errorf("invalid pre-release string: %q", b.Pre.L))
 		}
@@ -532,8 +564,8 @@ func cmpPostRelease(a, b PublicVersion) int {
 //
 //
 
-func (v PublicVersion) IsPreRelease() bool {
-	return v.Pre != nil || v.Dev != nil
+func (ver PublicVersion) IsPreRelease() bool {
+	return ver.Pre != nil || ver.Dev != nil
 }
 
 func cmpDevRelease(a, b PublicVersion) int {
@@ -596,16 +628,16 @@ func cmpEpoch(a, b PublicVersion) int {
 // versions. These syntaxes MUST be considered when parsing a version, however
 // they should be "normalized" to the standard syntax defined above.
 
-func (v PublicVersion) Normalize() (*PublicVersion, error) {
-	n, err := ParseVersion(v.String())
+func (ver PublicVersion) Normalize() (*PublicVersion, error) {
+	n, err := ParseVersion(ver.String())
 	if err != nil {
 		return nil, err
 	}
 	return &n.PublicVersion, nil
 }
 
-func (v LocalVersion) Normalize() (*LocalVersion, error) {
-	n, err := ParseVersion(v.String())
+func (ver LocalVersion) Normalize() (*LocalVersion, error) {
+	n, err := ParseVersion(ver.String())
 	if err != nil {
 		return nil, err
 	}
