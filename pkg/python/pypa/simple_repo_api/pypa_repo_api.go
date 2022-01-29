@@ -1,4 +1,4 @@
-// Package simple_repo_api implementes the PyPA Simple repository API.
+// Package simple_repo_api implements the PyPA Simple repository API.
 //
 // https://packaging.python.org/specifications/simple-repository-api/
 package simple_repo_api
@@ -26,11 +26,15 @@ type Client struct {
 	SupportedTags pep425.Installer
 }
 
-func NewClient(Python *pep440.Version, supportedTags pep425.Installer) Client {
+func NewClient(python *pep440.Version, supportedTags pep425.Installer) Client {
 	return Client{
 		Client: pep503.Client{
-			Python:   Python,
+			Python:   python,
 			HTMLHook: pep629.HTMLVersionCheck,
+
+			BaseURL:    "",  // default, let user override after initialization
+			HTTPClient: nil, // default, let user override after initialization
+			UserAgent:  "",  // default, let user override after initialization
 		},
 		SupportedTags: supportedTags,
 	}
@@ -44,8 +48,8 @@ func (c Client) SelectWheel(ctx context.Context, pkgname string, version pep440.
 	}
 	// 1. Filter by version
 	version2links := make(map[string][]pep503.FileLink)
-	var whlLinks []pep503.FileLink
-	var versions []pep440.Version
+	var whlLinks []pep503.FileLink //nolint:prealloc // 'continue' is quite likely
+	var versions []pep440.Version  //nolint:prealloc // 'continue' is quite likely
 	for _, link := range links {
 		linkInfo, err := bdist.ParseFilename(link.Text)
 		if err != nil {

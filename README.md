@@ -71,12 +71,13 @@ sure :P
 ```bash
 crane push \
   <(ocibuild image build \
+      --entrypoint=/usr/local/bin/go-program-that-calls-python \
       --base=<(crane pull docker.io/alpine:latest /dev/stdout) \
       <(ocibuild layer squash \
-          <(ocibuild layer wheel <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
-          <(ocibuild layer wheel <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
+          <(ocibuild layer wheel --platform-file=python.yml <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
+          <(ocibuild layer wheel --platform-file=python.yml <(curl https://files.pythonhosted.org/packages/69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417/beautifulsoup4-4.10.0-py3-none-any.whl))) \
       <(ocibuild layer squash \
-          <(ocibuild layer wheel ./python/mypackage.whl) \
+          <(ocibuild layer wheel --platform-file=python.yml ./python/mypackage.whl) \
           <(ocibuild layer gobuild ./cmd/go-program-that-calls-python))) \
   docker.io/datawire/ocibuild-example:latest
 ```
@@ -93,13 +94,16 @@ more like
 
 ```Makefile
 ocibuild-example.img.tar: $(tools/ocibuild) base.img.tar python-deps.layer.tar my-code.layer.tar
-	$(tools/ocibuild) image build --base=$(filter %.img.tar,$^) $(filter %.layer.tar,$^) >$@
+	{ $(tools/ocibuild) image build \
+	  --entrypoint=/usr/local/bin/go-program-that-calls-python \
+	  --base=$(filter %.img.tar,$^) \
+	  $(filter %.layer.tar,$^); } >$@
 
 base.img.tar: $(tools/crane)
 	$(tools/crane) pull docker.io/alpine:latest >$@
 
-%.whl.layer.tar: %.whl $(tools/ocibuild)
-	$(tools/ocibuild) layer wheel $< >$@
+%.whl.layer.tar: %.whl python.yml $(tools/ocibuild)
+	$(tools/ocibuild) layer wheel --platform-file=python.yml $< >$@
 
 pypi.urllib-1.26,7-py2.py3-none-any     = af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744
 pypi.beautifulsoup4-4.10.0-py3-none-any = 69/bf/f0f194d3379d3f3347478bd267f754fc68c11cbf2fe302a6ab69447b1417
@@ -122,17 +126,19 @@ cool stuff with Kubernetes manifests making use of the resulting
 image, but we're just going to look at the building-an-image part of
 `ko`'s functionality.
 
-Given the `ko` recipe
+The following `ko` recipe...
 
 ```bash
 docker tag "$(ko publish --local ./cmd/go-program)" docker.io/datawire/ocibuild-example:latest
 docker push docker.io/datawire/ocibuild-example:latest
 ```
 
-It is more-or-less equivalent to use this `ocibuild` recipe:
+...is more-or-less equivalent to the following `ocibuild` recipe:
 
 ```bash
-ocibuild image \
+ocibuild image build \
+  --tag=docker.io/datawire/ocibuild-example:latest \
+  --entrypoint=/usr/local/bin/go-program \
   --base=<(crane pull gcr.io/distroless/static:nonroot) \
   <(ocibuild layer gobuild ./cmd/go-program) \
   | docker load

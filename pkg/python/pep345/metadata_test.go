@@ -27,8 +27,8 @@ func TestParseVersionSpecifier(t *testing.T) {
 		OutputErr string
 	}
 	testcases := []TestCase{
-		{"2.5", pep345.VersionSpecifier{{pep345.CmpOp_EQ, parseVersion(t, "2.5")}}, ""},
-		{"==2.5", pep345.VersionSpecifier{{pep345.CmpOp_EQ, parseVersion(t, "2.5")}}, ""},
+		{"2.5", pep345.VersionSpecifier{{pep345.CmpOpEQ, parseVersion(t, "2.5")}}, ""},
+		{"==2.5", pep345.VersionSpecifier{{pep345.CmpOpEQ, parseVersion(t, "2.5")}}, ""},
 	}
 	t.Parallel()
 	for i, tc := range testcases {
@@ -55,7 +55,7 @@ func TestHaveRequiredPython(t *testing.T) {
 	}
 	testcases := []TestCase{
 		// Check some parse errors
-		{parseVersion(t, "2.5a1"), "~=2.5", false, `pep345.ParseVersionSpecifier: pep440.ParseVersion: invalid version: "~=2.5"`},
+		{parseVersion(t, "2.5a1"), "~=2.5", false, `pep345.ParseVersionSpecifier: pep440.ParseVersion: invalid version: "~=2.5"`}, //nolint:lll
 
 		// Examples from the spec
 		//

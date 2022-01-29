@@ -23,19 +23,23 @@ type FileReference interface {
 	Open() (io.ReadCloser, error)
 }
 
-func LayerFromFileReferences(vfs []FileReference, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromFileReferences(
+	vfs []FileReference,
+	clampTime time.Time,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	sort.Slice(vfs, func(i, j int) bool {
 		// Do a part-wise comparison, rather than a simple string compare on .Fullname(),
 		// because "-" < "/" < EOF.
 		iParts := strings.Split(vfs[i].FullName(), "/")
 		jParts := strings.Split(vfs[j].FullName(), "/")
-		for k := 0; k < len(iParts) || k < len(jParts); k++ {
+		for idx := 0; idx < len(iParts) || idx < len(jParts); idx++ {
 			var iPart, jPart string
-			if k < len(iParts) {
-				iPart = iParts[k]
+			if idx < len(iParts) {
+				iPart = iParts[idx]
 			}
-			if k < len(jParts) {
-				jPart = jParts[k]
+			if idx < len(jParts) {
+				jPart = jParts[idx]
 			}
 			if iPart != jPart {
 				return iPart < jPart
@@ -66,15 +70,15 @@ func LayerFromFileReferences(vfs []FileReference, clampTime time.Time, opts ...o
 			return nil, err
 		}
 		if header.Typeflag == tar.TypeReg {
-			fh, err := file.Open()
+			reader, err := file.Open()
 			if err != nil {
 				return nil, err
 			}
-			if _, err := io.Copy(tarWriter, fh); err != nil {
-				_ = fh.Close()
+			if _, err := io.Copy(tarWriter, reader); err != nil {
+				_ = reader.Close()
 				return nil, err
 			}
-			if err := fh.Close(); err != nil {
+			if err := reader.Close(); err != nil {
 				return nil, err
 			}
 		}

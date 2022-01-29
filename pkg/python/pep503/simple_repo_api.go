@@ -6,10 +6,6 @@ package pep503
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -23,6 +19,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pep345"
 	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
@@ -92,32 +89,20 @@ func (c Client) get(ctx context.Context, requestURL string) (_ *url.URL, _ []byt
 		return nil, nil, &HTTPError{Status: resp.Status, StatusCode: resp.StatusCode}
 	}
 	if u, err := url.Parse(requestURL); err == nil && u.Fragment != "" {
-		if vals, err := url.ParseQuery(u.Fragment); err == nil {
-			for k, vs := range vals {
-				var sum []byte
-				for _, v := range vs {
-					switch k {
-					case "md5":
-						_sum := md5.Sum(content)
-						sum = _sum[:]
-					case "sha1":
-						_sum := sha1.Sum(content)
-						sum = _sum[:]
-					case "sha224":
-						_sum := sha256.Sum224(content)
-						sum = _sum[:]
-					case "sha256":
-						_sum := sha256.Sum256(content)
-						sum = _sum[:]
-					case "sha384":
-						_sum := sha512.Sum384(content)
-						sum = _sum[:]
-					case "sha512":
-						_sum := sha512.Sum512(content)
-						sum = _sum[:]
+		if keyvals, err := url.ParseQuery(u.Fragment); err == nil {
+			for key, vals := range keyvals {
+				for _, val := range vals {
+					newHasher := python.HashlibAlgorithmsGuaranteed[key]
+					if newHasher == nil {
+						continue
 					}
-					if sum != nil && hex.EncodeToString(sum) != v {
-						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s", k, v, hex.EncodeToString(sum))
+					hasher := newHasher()
+					hasher.Write(content)
+					sum := hex.EncodeToString(hasher.Sum(nil))
+					if sum != val {
+						//nolint:lll // error string
+						return nil, nil, fmt.Errorf("checksum mismatch: %s: expected=%s actual=%s",
+							key, val, sum)
 					}
 				}
 			}
@@ -174,7 +159,7 @@ func (c Client) getHTML5Index(ctx context.Context, requestURL string) ([]Link, e
 		if node.Type != html.ElementNode || node.Data != "a" {
 			return nil
 		}
-		link := Link{
+		link := Link{ //nolint:exhaustivestruct // other fields get set below
 			DataAttrs: make(map[string]string),
 		}
 		for _, attr := range node.Attr {
@@ -254,14 +239,15 @@ func normalize(str string) string {
 func (c Client) ListPackageFiles(ctx context.Context, pkgname string) ([]FileLink, error) {
 	// "the only valid characters in a name are the ASCII alphabet, ASCII numbers, `.`, `-`, and
 	// `_`."
-	for _, c := range pkgname {
-		if !(('a' <= c && c <= 'z') ||
-			('A' <= c && c <= 'Z') ||
-			('0' <= c && c <= '9') ||
-			c == '.' ||
-			c == '-' ||
-			c == '_') {
-			return nil, fmt.Errorf("illegal character in pkgname: %q: %s", pkgname, strconv.QuoteRuneToASCII(c))
+	for _, char := range pkgname {
+		if !(('a' <= char && char <= 'z') ||
+			('A' <= char && char <= 'Z') ||
+			('0' <= char && char <= '9') ||
+			char == '.' ||
+			char == '-' ||
+			char == '_') {
+			return nil, fmt.Errorf("illegal character in pkgname: %q: %s",
+				pkgname, strconv.QuoteRuneToASCII(char))
 		}
 	}
 

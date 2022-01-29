@@ -27,7 +27,12 @@ type Prefix struct {
 	GName string
 }
 
-func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func LayerFromDir(
+	dirname string,
+	prefix *Prefix,
+	clampTime time.Time,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	type logEntry struct {
 		Name string
 		Info fs.FileInfo
@@ -40,7 +45,7 @@ func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...o
 
 	if prefix != nil {
 		if prefix.Mode == 0 {
-			prefix.Mode = 0755
+			prefix.Mode = 0o755
 		}
 		var dirs []string
 		for dir := prefix.DirName; dir != "."; dir = path.Dir(dir) {
@@ -63,11 +68,11 @@ func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...o
 		}
 	}
 
-	err := filepath.Walk(dirname, func(p string, info fs.FileInfo, e error) error {
+	err := filepath.Walk(dirname, func(filename string, info fs.FileInfo, e error) error {
 		if e != nil {
 			return e
 		}
-		name, err := filepath.Rel(dirname, p)
+		name, err := filepath.Rel(dirname, filename)
 		if err != nil {
 			return err
 		}
@@ -98,7 +103,7 @@ func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...o
 			}
 		}
 		if header.Typeflag == tar.TypeLink {
-			header.Linkname, err = os.Readlink(p)
+			header.Linkname, err = os.Readlink(filename)
 			if err != nil {
 				return err
 			}
@@ -116,15 +121,15 @@ func LayerFromDir(dirname string, prefix *Prefix, clampTime time.Time, opts ...o
 			return err
 		}
 		if header.Typeflag == tar.TypeReg {
-			fh, err := os.Open(p)
+			reader, err := os.Open(filename)
 			if err != nil {
 				return err
 			}
-			if _, err := io.Copy(tarWriter, fh); err != nil {
-				_ = fh.Close()
+			if _, err := io.Copy(tarWriter, reader); err != nil {
+				_ = reader.Close()
 				return err
 			}
-			if err := fh.Close(); err != nil {
+			if err := reader.Close(); err != nil {
 				return err
 			}
 		}

@@ -1,7 +1,6 @@
 package cliutil_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -11,7 +10,9 @@ import (
 	"github.com/datawire/ocibuild/pkg/cliutil"
 )
 
+//nolint:paralleltest // can't use .Parallel() with .Setenv()
 func TestHelpTemplate(t *testing.T) {
+	t.Setenv("COLUMNS", "80")
 	noopRunE := func(_ *cobra.Command, _ []string) error {
 		return nil
 	}
@@ -38,8 +39,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
@@ -71,8 +72,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"\n" +
@@ -101,8 +102,8 @@ func TestHelpTemplate(t *testing.T) {
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//0       1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                          \n"  \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
@@ -132,14 +133,14 @@ func TestHelpTemplate(t *testing.T) {
 				cmd.AddCommand(&cobra.Command{
 					Use:   "example-subcommand [flags]",
 					Args:  cobra.ExactArgs(0),
-					Short: "One line description of subcommand, one line on own, but wrapped in table",
+					Short: "One line description of subcommand, one line on own, but wrapped in table", //nolint:lll
 					RunE:  noopRunE,
 				})
 				return cmd
 			}(),
 			ExpectedHelp: "" +
-				//        1         2         3         4         5         6         7         8
-				//2345678901234567890123456789012345678901234567890123456789012345678901234567890
+				// 0      1         2         3         4         5         6         7         8
+				// 345678901234567890123456789012345678901234567890123456789012345678901234567890
 				//                                                                         \n"   \n"
 				"Usage: frobnicate [flags] VARS_ARE_UNDERSCORE_AND_CAPITAL\n" +
 				"One line description of program, no period\n" +
@@ -161,7 +162,6 @@ func TestHelpTemplate(t *testing.T) {
 				"",
 		},
 	}
-	os.Setenv("COLUMNS", "80")
 	for tcName, tcData := range testcases {
 		tcData := tcData
 		t.Run(tcName, func(t *testing.T) {

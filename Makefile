@@ -87,6 +87,8 @@ lint: tools/bin/golangci-lint
 
 tools/bin/%: tools/src/%/pin.go tools/src/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
+tools/bin/crane: tools/bin/%: tools/src/%/pin.go go.mod
+	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 tools/bin/%: tools/src/%.sh
 	mkdir -p $(@D)
 	install -m755 $< $@

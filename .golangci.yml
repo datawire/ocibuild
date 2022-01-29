@@ -1,9 +1,34 @@
 linters:
-  enable:
-    - depguard
-    - forbidigo
-    - gci
-    - nolintlint
+  enable-all: true
+  disable:
+    # deprecated
+    - golint     # deprecated, replaced by 'revive'
+    - interfacer # deprecated
+    - maligned   # deprecated, replaced by 'govet fieldalignement'
+    - scopelint  # deprecated, replaced by 'exportloopref'
+
+    # style
+    - nlreturn # style: overly nit-picky whitespace linter
+    - wsl      # style: overly nit-picky whitespace linter
+    - godot    # style: sentence fragments are just too useful
+
+    # correctness
+    - tagliatelle # JSON names aren't up to us
+
+    # complexity: these are just annoying
+    - cyclop
+    - funlen
+    - gocognit
+    - gocyclo
+    - nestif
+
+    # error handling
+    - goerr113  # forbids fmt.Errorf(%w), which is just silly
+    - wrapcheck # too over-eager; inner functions count on outer functions to wrap
+
+    # misc
+    - gomnd # half of the code is dealing with magic numbers
+    - godox # there are TODOs, and that's OK
 linters-settings:
   depguard:
     list-type: blacklist
@@ -15,14 +40,99 @@ linters-settings:
       - '^os\.(DirEntry|FileInfo|FileMode|PathError)$' # deprecated in Go 1.16, import them from 'io/fs' instead
       - '\.Readdir$' # deprecated in Go 1.16, use ReadDir instead
     exclude_godoc_examples: false
+  gofmt:
+    simplify: true
+  gofumpt:
+    lang-version: "1.17"
+    extra-rules: true
   goimports:
     local-prefixes: github.com/datawire/ocibuild
+  gosec:
+    excludes:
+      - G306 # honor umask
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - stdlib
+      - '^github\.com/google/go-containerregistry/pkg/v1\.(Layer|Image)$'
+      - '^github\.com/datawire/ocibuild/pkg/fsutil\.FileReference$'
+      - '^github\.com/datawire/ocibuild/pkg/python/pep440\.ExclusionBehavior$'
+  lll:
+    # mimic .editorconfig, plus 20 chars of slop
+    line-length: 120
+    tab-width: 8
+  misspell:
+    locale: US
   nolintlint:
     allow-unused: false
     allow-leading-space: false
     require-explanation: true
     require-specific: true
     allow-no-explanation:
-      - deadcode
-      - unused
-      - varcheck
+      - exhaustivestruct # just make it clear that it's intentional
+      - lll # explanations are good, but often would just make things worse
+  stylecheck:
+    go: '1.17'
+    checks:
+      - "all"
+      - "-ST1003" # disable ST1003; Package names are based on specification names
+  varnamelen:
+    ignore-names:
+      - bs # ByteS
+      - fn # FunctioN
+      - ok # OKay
+      - tc # TestCase
+      - i  # Index
+      - 'a'
+      - 'b'
+issues:
+  exclude-rules:
+    ## Problematic lnters ############################################
+
+    - # Buggy linter; false positives
+      linters: [paralleltest]
+      text: "Range statement for test .* does not use range value in test Run"
+
+    ## Personal exceptions ##########################################
+
+    - # The "main" package is allowed to use globals and init()
+      path: '^[^/]*$'
+      linters: [gochecknoglobals, gochecknoinits]
+    - # Allow Cmp methods to be (a, b)
+      linters: [stylecheck]
+      text: 'ST1016: methods on the same type should have the same receiver name \(seen.* 1x "a"'
+      source: '^func \(a \S+\) Cmp\(b \S+\) int {'
+    - # Allow Cmp methods to be (a, b)
+      linters: [revive]
+      text: "receiver-naming: receiver name a should be consistent with previous receiver name"
+      source: '^func \(a \S+\) Cmp\(b \S+\) int {'
+    - # Some common structs will never have everything set
+      linters: [exhaustivestruct]
+      source: '(&tar\.Header|&cobra\.Command|testutil\.QuickConfig|quick\.Config){'
+    - # Allow math/rand in tests
+      linters: [gosec]
+      text: "use of weak random number generator"
+      path: '_test\.go'
+
+    ## Exceptions for specifications ################################
+
+    - # Allow PEPs to use a few UK-isms
+      linters: [misspell]
+      path: '^pkg/python/(pep|pypa/)'
+      text: '`(behaviours?|standardised)` is a misspelling'
+    - # Package names are based on specification names
+      linters: [revive]
+      text: "var-naming: don't use an underscore in package name"
+    - # We only use crypto as specified
+      linters: [gosec]
+      text: "weak cryptographic primitive"
+
+    ## Exceptions for borrowed code #################################
+
+    - # Don't be too nitpicky on borrowed code
+      path: 'borrowed_.*\.go$'
+      linters:
+        - gocritic
+        - varnamelen

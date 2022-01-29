@@ -16,14 +16,14 @@ func randSeg(rand *rand.Rand) int {
 	return rand.Intn(3000)
 }
 
-func bound(low, n, high int) int {
-	if n < low {
-		n = low
+func bound(low, val, high int) int {
+	if val < low {
+		val = low
 	}
-	if n > high {
-		n = high
+	if val > high {
+		val = high
 	}
-	return n
+	return val
 }
 
 func (ver PublicVersion) generate(rand *rand.Rand, size int) PublicVersion {
@@ -92,10 +92,11 @@ func (ver LocalVersion) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(ver.generate(rand, size))
 }
 
+//nolint:exhaustivestruct
 var _ quick.Generator = LocalVersion{}
 
-func (op CmpOp) generate(rand *rand.Rand, size int) CmpOp {
-	return CmpOp(rand.Intn(int(_CmpOp_End)))
+func (op CmpOp) generate(rand *rand.Rand, _ int) CmpOp {
+	return CmpOp(rand.Intn(int(_CmpOpEnd)))
 }
 
 // Generate implements testing/quick.Generator.

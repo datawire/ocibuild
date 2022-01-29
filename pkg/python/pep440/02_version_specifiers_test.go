@@ -14,17 +14,19 @@ import (
 
 func TestParseSpecifier(t *testing.T) {
 	t.Parallel()
-	testcases := map[string]struct {
+	type TestCase struct {
 		InStr  string
 		OutVal pep440.Specifier
 		OutErr string
-	}{
+	}
+	//nolint:lll // big table with string literals
+	testcases := map[string]TestCase{
 		"empty":       {"", pep440.Specifier{}, ""},
 		"whitespace":  {"  ", pep440.Specifier{}, ""},
 		"emptycommas": {", ,", pep440.Specifier{}, ""},
-		"eq":          {"==1.0", pep440.Specifier{{pep440.CmpOp_StrictMatch, mustParseVersion(t, "1.0")}}, ""},
+		"eq":          {"==1.0", pep440.Specifier{{pep440.CmpOpStrictMatch, mustParseVersion(t, "1.0")}}, ""},
 		"missing-op":  {"1.0", nil, `pep440.ParseSpecifier: invalid comparison operator: "1.0"`},
-		"1seg-ok":     {"==1", pep440.Specifier{{pep440.CmpOp_StrictMatch, mustParseVersion(t, "1")}}, ""},
+		"1seg-ok":     {"==1", pep440.Specifier{{pep440.CmpOpStrictMatch, mustParseVersion(t, "1")}}, ""},
 		"1seg-bad":    {"~=1", nil, `pep440.ParseSpecifier: at least 2 release segments required in ~= specifier clauses`},
 		"bad-dev":     {"==1.0dev.*", nil, `pep440.ParseSpecifier: dev-part not permitted in prefix == specifier clauses`},
 		"bad-loc":     {"==1.0+loc.*", nil, `pep440.ParseSpecifier: local-part not permitted in prefix == specifier clauses`},
@@ -56,12 +58,34 @@ func TestEquivalentSpecifiers(t *testing.T) {
 	}
 	staticInputs := []pep440.Version{
 		pep440.LocalVersion{
-			PublicVersion: pep440.PublicVersion{Epoch: 0, Release: []int{2, 2654, 2662, 1281, 1226}, Pre: &pep440.PreRelease{L: "rc", N: 2647}, Post: nil, Dev: nil},
-			Local:         nil,
+			PublicVersion: pep440.PublicVersion{
+				Epoch:   0,
+				Release: []int{2, 2654, 2662, 1281, 1226},
+				Pre:     &pep440.PreRelease{L: "rc", N: 2647},
+				Post:    nil,
+				Dev:     nil,
+			},
+			Local: nil,
 		},
 		pep440.LocalVersion{
-			PublicVersion: pep440.PublicVersion{Epoch: 0, Release: []int{2, 418, 849}, Pre: nil, Post: intPtr(2328), Dev: intPtr(109)},
-			Local:         []intstr.IntOrString{intstr.IntOrString{Type: 0, IntVal: 830, StrVal: ""}, intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "je4kz"}, intstr.IntOrString{Type: 0, IntVal: 2083, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 2694, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 1127, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 142, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 1122, StrVal: ""}, intstr.IntOrString{Type: 0, IntVal: 2676, StrVal: ""}, intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"}},
+			PublicVersion: pep440.PublicVersion{
+				Epoch:   0,
+				Release: []int{2, 418, 849},
+				Pre:     nil,
+				Post:    intPtr(2328),
+				Dev:     intPtr(109),
+			},
+			Local: []intstr.IntOrString{
+				{Type: 0, IntVal: 830, StrVal: ""},
+				{Type: 1, IntVal: 0, StrVal: "je4kz"},
+				{Type: 0, IntVal: 2083, StrVal: ""},
+				{Type: 0, IntVal: 2694, StrVal: ""},
+				{Type: 0, IntVal: 1127, StrVal: ""},
+				{Type: 0, IntVal: 142, StrVal: ""},
+				{Type: 0, IntVal: 1122, StrVal: ""},
+				{Type: 0, IntVal: 2676, StrVal: ""},
+				{Type: 1, IntVal: 0, StrVal: "iyf3f9poj7"},
+			},
 		},
 	}
 

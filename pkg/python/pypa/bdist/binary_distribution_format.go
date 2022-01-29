@@ -85,7 +85,14 @@ func (wh *wheel) Open(filename string) (io.ReadCloser, error) {
 // it is zero then the timestamps in the wheel file are preserved.
 //
 // If maxTime is zero, then it defaults based on the maximum timestamp in the wheel file.
-func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime time.Time, wheelfilename string, hook PostInstallHook, opts ...ociv1tarball.LayerOption) (ociv1.Layer, error) {
+func InstallWheel(
+	ctx context.Context,
+	plat python.Platform,
+	minTime, maxTime time.Time,
+	wheelfilename string,
+	hook PostInstallHook,
+	opts ...ociv1tarball.LayerOption,
+) (ociv1.Layer, error) {
 	plat, err := sanitizePlatformForLayer(plat)
 	if err != nil {
 		return nil, fmt.Errorf("bdist.InstallWheel: validate python.Platform: %w", err)
@@ -97,11 +104,13 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 	}
 	defer zipReader.Close()
 
-	wh := &wheel{
+	wh := &wheel{ //nolint:varnamelen // same as receiver name
 		zip: &zipReader.Reader,
+
+		cachedDistInfoDir: "", // don't know it yet
 	}
 
-	if err := wh.integrityCheck(ctx); err != nil {
+	if err := wh.integrityCheck(); err != nil {
 		return nil, fmt.Errorf("bdist.InstallWheel: wheel integrity: %w", err)
 	}
 
@@ -144,10 +153,11 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 					FileInfo: (&tar.Header{
 						Typeflag: tar.TypeDir,
 						Name:     dir,
-						Mode:     0755,
+						Mode:     0o755,
 						ModTime:  maxTime,
 					}).FileInfo(),
 					MFullName: dir,
+					MContent:  nil,
 				}
 			}
 		}
@@ -183,6 +193,7 @@ func InstallWheel(ctx context.Context, plat python.Platform, minTime, maxTime ti
 // This PEP was accepted, and the defined wheel version updated to 1.0, by
 // Nick Coghlan on 16th February, 2013 [1]_
 
+//nolint:gochecknoglobals // Would be 'const'.
 var specVersion, _ = pep440.ParseVersion("1.0")
 
 //
@@ -209,7 +220,12 @@ var specVersion, _ = pep440.ParseVersion("1.0")
 // =======
 //
 
-func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime, maxTime time.Time) (map[string]fsutil.FileReference, string, error) {
+func (wh *wheel) installToVFS(
+	ctx context.Context,
+	plat python.Platform,
+	minTime,
+	maxTime time.Time,
+) (map[string]fsutil.FileReference, string, error) {
 	// Installing a wheel 'distribution-1.0-py32-none-any.whl'
 	// -------------------------------------------------------
 	//
@@ -229,7 +245,8 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 		return nil, "", fmt.Errorf("parse Wheel-Version: %w", err)
 	}
 	if wheelVersion.Major() > specVersion.Major() {
-		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser", wheelVersion)
+		return nil, "", fmt.Errorf("wheel file's Wheel-Version (%s) is not compatible with this wheel parser",
+			wheelVersion)
 	}
 	if wheelVersion.Cmp(*specVersion) > 0 {
 		dlog.Warnf(ctx, "wheel file's Wheel-Version (%s) is newer than this wheel parser", wheelVersion)
@@ -295,7 +312,8 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 		case "data":
 			dstDataDir = plat.Scheme.Data
 		default:
-			return nil, "", fmt.Errorf("unsupported wheel data type %q: %q", key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
+			return nil, "", fmt.Errorf("unsupported wheel data type %q: %q",
+				key, path.Join(strings.TrimSuffix(distInfoDir, ".dist-info")+".data", relName))
 		}
 		newFullName := path.Join(dstDataDir, rest)
 		vfsTypes[newFullName] = key
@@ -318,13 +336,13 @@ func (wh *wheel) installToVFS(ctx context.Context, plat python.Platform, minTime
 	// https://packaging.python.org/en/latest/specifications/recording-installed-packages/
 	// (implemented as a PostInstallHook) overrides us.
 	//
-	//create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
+	// create(vfs, path.Join(dstDir, distInfoDir, "RECORD"), TODO(vfs))
 
 	//   e. Remove empty ``distribution-1.0.data`` directory.
 	delete(vfs, path.Join(dstDir, strings.TrimSuffix(distInfoDir, ".dist-info")+".data"))
 	//   f. Compile any installed .py to .pyc. (Uninstallers should be smart
 	//      enough to remove .pyc even if it is not mentioned in RECORD.)
-	var srcs []fsutil.FileReference
+	var srcs []fsutil.FileReference //nolint:prealloc // 'continue' is quite likely
 	for _, file := range vfs {
 		if !strings.HasSuffix(file.Name(), ".py") {
 			continue
@@ -379,7 +397,7 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 			continue
 		}
 
-		entry := vfs[filename].(*zipEntry)
+		entry := vfs[filename].(*zipEntry) //nolint:forcetypeassert // it's a bug if it's not true
 
 		originalOpen := entry.open
 		shebang := plat.ConsoleShebang
@@ -408,7 +426,7 @@ func rewritePython(plat python.Platform, vfs map[string]fsutil.FileReference, vf
 		entry.header.UncompressedSize64 -= uint64(skip)
 
 		externalAttrs := python.ParseZIPExternalAttributes(entry.header.ExternalAttrs)
-		externalAttrs.UNIX = externalAttrs.UNIX | 0111
+		externalAttrs.UNIX |= 0o111
 		entry.header.ExternalAttrs = externalAttrs.Raw()
 
 		// Arrange for RECORD to contain the pre-rewritten hash and size.
@@ -500,33 +518,33 @@ var reFilename = regexp.MustCompile(regexp.MustCompile(`\s+`).ReplaceAllString(`
 		\.whl$`, ``))
 
 func ParseFilename(filename string) (*FileNameData, error) {
-	m := reFilename.FindStringSubmatch(filename)
-	if m == nil {
+	match := reFilename.FindStringSubmatch(filename)
+	if match == nil {
 		return nil, fmt.Errorf("invalid wheel filename: %q", filename)
 	}
 
 	var ret FileNameData
 
-	ret.Distribution = m[reFilename.SubexpIndex("distribution")]
+	ret.Distribution = match[reFilename.SubexpIndex("distribution")]
 
-	ver, err := pep440.ParseVersion(m[reFilename.SubexpIndex("version")])
+	ver, err := pep440.ParseVersion(match[reFilename.SubexpIndex("version")])
 	if err != nil {
 		return nil, fmt.Errorf("invalid wheel filename: %q: %w", filename, err)
 	}
 	ret.Version = *ver
 
-	if buildN := m[reFilename.SubexpIndex("build_n")]; buildN != "" {
+	if buildN := match[reFilename.SubexpIndex("build_n")]; buildN != "" {
 		n, _ := strconv.Atoi(buildN)
 		ret.BuildTag = &BuildTag{
 			Int: n,
-			Str: m[reFilename.SubexpIndex("build_l")],
+			Str: match[reFilename.SubexpIndex("build_l")],
 		}
 	}
 
 	ret.CompatibilityTag = pep425.Tag{
-		Python:   m[reFilename.SubexpIndex("python")],
-		ABI:      m[reFilename.SubexpIndex("abi")],
-		Platform: m[reFilename.SubexpIndex("platform")],
+		Python:   match[reFilename.SubexpIndex("python")],
+		ABI:      match[reFilename.SubexpIndex("abi")],
+		Platform: match[reFilename.SubexpIndex("platform")],
 	}
 
 	return &ret, nil
@@ -708,6 +726,8 @@ func (wh *wheel) parseDistInfoWheel() (textproto.MIMEHeader, error) {
 //    algorithm must be sha256 or better; specifically, md5 and sha1 are
 //    not permitted, as signed wheel files rely on the strong hashes in
 //    RECORD to validate the integrity of the archive.
+
+//nolint:gochecknoglobals // Would be 'const'.
 var strongHashes = map[string]func() hash.Hash{
 	// The spec is an open-ended list of hashes, so here's what PIP 20.3.4
 	// pip/_internal/utils/hashes.py includes:
@@ -790,7 +810,7 @@ var strongHashes = map[string]func() hash.Hash{
 //
 //
 
-func (wh *wheel) integrityCheck(ctx context.Context) error {
+func (wh *wheel) integrityCheck() error {
 	distInfoDir, err := wh.distInfoDir()
 	if err != nil {
 		return err
@@ -834,14 +854,14 @@ func (wh *wheel) integrityCheck(ctx context.Context) error {
 	checkFile := func(filename, algo string) (hash string, size int, err error) {
 		reader, err := wh.Open(filename)
 		if err != nil {
-			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+			return "", 0, err
 		}
 		defer func() {
 			_ = reader.Close()
 		}()
 		bs, err := io.ReadAll(reader)
 		if err != nil {
-			return "", 0, fmt.Errorf("checking file %q: %w", filename, err)
+			return "", 0, err
 		}
 		size = len(bs)
 		if algo != "" {
@@ -876,16 +896,17 @@ func (wh *wheel) integrityCheck(ctx context.Context) error {
 		algo := strings.SplitN(hash, "=", 2)[0]
 		actHash, actSize, err := checkFile(name, algo)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("RECORD row %d: %w", i, err))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: %w",
+				i, name, err))
 			continue
 		}
 		if hash != "" && actHash != hash {
-			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file hash %q does not match RECORD hash %q",
-				i, name, actHash, hash))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: checksum mismatch: RECORD=%q actual=%q",
+				i, name, hash, actHash))
 		}
 		if size != "" && strconv.Itoa(actSize) != size {
-			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: actual file size %d does not match RECORD size %s",
-				i, name, actSize, size))
+			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: size mismatch: RECORD=%s actual=%d",
+				i, name, size, actSize))
 		}
 	}
 

@@ -29,7 +29,7 @@ import (
 )
 
 func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, error) {
-	if err := os.MkdirAll(destDir, 0777); err != nil {
+	if err := os.MkdirAll(destDir, 0o777); err != nil {
 		return nil, err
 	}
 
@@ -42,7 +42,11 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 		return nil, err
 	}
 
-	cmd := dexec.CommandContext(ctx, "pip3", "install", "--no-deps", "--ignore-installed", "--prefix="+destDir, wheelFile)
+	cmd := dexec.CommandContext(ctx, "pip3", "install",
+		"--no-deps",
+		"--ignore-installed",
+		"--prefix="+destDir,
+		wheelFile)
 	cmd.Env = append(os.Environ(),
 		"PYTHONHASHSEED=0",
 		fmt.Sprintf("SOURCE_DATE_EPOCH=%d", reproducible.Now().Unix()))
@@ -79,10 +83,12 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 		destDir,
 		&dir.Prefix{
 			DirName: layerPrefix,
-			UID:     os.Getuid(),
-			GID:     os.Getgid(),
-			UName:   usr.Username,
-			GName:   grp.Name,
+			Mode:    0, // default
+
+			UID:   os.Getuid(),
+			GID:   os.Getgid(),
+			UName: usr.Username,
+			GName: grp.Name,
 		},
 		reproducible.Now(),
 	)
@@ -90,7 +96,6 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 
 // Return a python.Platform that mimics the behavior of `pip3 install --prefix=${destDir}`.
 func pipPlatform(ctx context.Context, destDir string) (python.Platform, error) {
-
 	// 1. Look up user info.
 	usr, err := user.Current()
 	if err != nil {
@@ -105,7 +110,7 @@ func pipPlatform(ctx context.Context, destDir string) (python.Platform, error) {
 	schemeBytes, err := dexec.CommandContext(ctx, "python3", "-c", `
 import sys
 import json
-from pip._internal.locations import get_scheme;
+from pip._internal.locations import get_scheme
 scheme=get_scheme("", prefix=sys.argv[1])
 print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 `, destDir).Output()
@@ -149,13 +154,15 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 
 // Test against the Package Installer for Python.
 func TestPIP(t *testing.T) {
+	t.Parallel()
 	t.Logf("reproducible.Now() => %v", reproducible.Now())
 
+	//nolint:thelper // actually the main thing
 	testDownloadedWheels(t, func(t *testing.T, filename string, content []byte) {
 		ctx := dlog.NewTestContext(t, true)
 		tmpdir := t.TempDir()
 
-		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpdir, filename), content, 0o666))
 
 		// pip reference install
 		expLayer, err := pipInstall(ctx,
@@ -179,8 +186,9 @@ func TestPIP(t *testing.T) {
 				recording_installs.Record(
 					"sha256",
 					"pip",
-					&direct_url.DirectURL{
-						URL:         "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+					&direct_url.DirectURL{ //nolint:exhaustivestruct
+						URL: "file://" + filepath.ToSlash(filepath.Join(tmpdir, filename)),
+						//nolint:exhaustivestruct
 						ArchiveInfo: &direct_url.ArchiveInfo{},
 					},
 				),

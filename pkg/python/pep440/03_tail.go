@@ -521,9 +521,13 @@ import (
 // To test whether a version identifier is in the canonical format, you can use
 // the following function::
 //
+
+//nolint:lll // long regexp in source specification
+//
 //     import re
 //     def is_canonical(version):
 //         return re.match(r'^([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?$', version) is not None
+
 //
 // To extract the components of a version identifier, use the following regular
 // expression (as defined by the `packaging <https://github.com/pypa/packaging>`_
@@ -596,22 +600,22 @@ var reVersion = regexp.MustCompile(`(?i)^\s*` + regexp.MustCompile(`(?:\s+|#.*)`
 	`, ``) + `\s*$`)
 
 func parseVersion(str string) (*Version, error) {
-	m := reVersion.FindStringSubmatch(str)
-	if m == nil {
+	match := reVersion.FindStringSubmatch(str)
+	if match == nil {
 		return nil, fmt.Errorf("invalid version: %q", str)
 	}
 
 	var ver Version
 	var err error
 
-	if epoch := m[reVersion.SubexpIndex("epoch")]; epoch != "" {
+	if epoch := match[reVersion.SubexpIndex("epoch")]; epoch != "" {
 		ver.Epoch, err = strconv.Atoi(epoch)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	for _, segStr := range strings.Split(m[reVersion.SubexpIndex("release")], ".") {
+	for _, segStr := range strings.Split(match[reVersion.SubexpIndex("release")], ".") {
 		segInt, err := strconv.Atoi(segStr)
 		if err != nil {
 			return nil, err
@@ -624,24 +628,25 @@ func parseVersion(str string) (*Version, error) {
 		N int
 	}
 
-	parseLetterNumber := func(l, n string, acceptableLetters map[string][]string) (*letterNumber, error) {
-		if l == "" && n == "" {
+	parseLetterNumber := func(letter, number string, acceptableLetters map[string][]string) (*letterNumber, error) {
+		if letter == "" && number == "" {
+			//nolint:nilnil // weird semantic
 			return nil, nil
 		}
-		l = strings.ToLower(l)
-		if l != "" && n == "" {
-			n = "0"
+		letter = strings.ToLower(letter)
+		if letter != "" && number == "" {
+			number = "0"
 		}
 		var ret letterNumber
 
-		if _, ok := acceptableLetters[l]; ok {
-			ret.L = l
+		if _, ok := acceptableLetters[letter]; ok {
+			ret.L = letter
 		} else {
 			found := false
 		outer:
 			for canonical, others := range acceptableLetters {
 				for _, other := range others {
-					if l == other {
+					if letter == other {
 						ret.L = canonical
 						found = true
 						break outer
@@ -649,12 +654,12 @@ func parseVersion(str string) (*Version, error) {
 				}
 			}
 			if !found {
-				return nil, fmt.Errorf("invalid string-part: %q", l)
+				return nil, fmt.Errorf("invalid string-part: %q", letter)
 			}
 		}
 
-		if n != "" {
-			ret.N, err = strconv.Atoi(n)
+		if number != "" {
+			ret.N, err = strconv.Atoi(number)
 			if err != nil {
 				return nil, err
 			}
@@ -663,12 +668,12 @@ func parseVersion(str string) (*Version, error) {
 	}
 
 	pre, err := parseLetterNumber(
-		m[reVersion.SubexpIndex("pre_l")],
-		m[reVersion.SubexpIndex("pre_n")],
+		match[reVersion.SubexpIndex("pre_l")],
+		match[reVersion.SubexpIndex("pre_n")],
 		map[string][]string{
-			"a":  []string{"alpha"},
-			"b":  []string{"beta"},
-			"rc": []string{"c", "pre", "preview"},
+			"a":  {"alpha"},
+			"b":  {"beta"},
+			"rc": {"c", "pre", "preview"},
 		})
 	if err != nil {
 		return nil, fmt.Errorf("pre-release: %w", err)
@@ -681,10 +686,10 @@ func parseVersion(str string) (*Version, error) {
 	}
 
 	post, err := parseLetterNumber(
-		m[reVersion.SubexpIndex("post_l")],
-		m[reVersion.SubexpIndex("post_n1")]+m[reVersion.SubexpIndex("post_n2")],
+		match[reVersion.SubexpIndex("post_l")],
+		match[reVersion.SubexpIndex("post_n1")]+match[reVersion.SubexpIndex("post_n2")],
 		map[string][]string{
-			"post": []string{"", "rev", "r"},
+			"post": {"", "rev", "r"},
 		})
 	if err != nil {
 		return nil, fmt.Errorf("post-release: %w", err)
@@ -694,8 +699,8 @@ func parseVersion(str string) (*Version, error) {
 	}
 
 	dev, err := parseLetterNumber(
-		m[reVersion.SubexpIndex("dev_l")],
-		m[reVersion.SubexpIndex("dev_n")],
+		match[reVersion.SubexpIndex("dev_l")],
+		match[reVersion.SubexpIndex("dev_n")],
 		map[string][]string{
 			"dev": nil,
 		})
@@ -706,7 +711,7 @@ func parseVersion(str string) (*Version, error) {
 		ver.Dev = &dev.N
 	}
 
-	localParts := strings.FieldsFunc(m[reVersion.SubexpIndex("local")], func(r rune) bool {
+	localParts := strings.FieldsFunc(match[reVersion.SubexpIndex("local")], func(r rune) bool {
 		return strings.ContainsRune("-_.", r)
 	})
 	for _, part := range localParts {

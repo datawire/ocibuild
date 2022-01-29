@@ -58,7 +58,7 @@ func (f *fsfile) Get(child string) *fsfile {
 			f.body = nil
 			f.Get(".wh..wh..opq").Set(&tar.Header{
 				Typeflag: tar.TypeReg,
-				Mode:     0644,
+				Mode:     0o644,
 			}, nil)
 		}
 		// Look up the child
@@ -66,7 +66,7 @@ func (f *fsfile) Get(child string) *fsfile {
 			f.children = make(map[string]*fsfile)
 		}
 		if _, ok := f.children[child]; !ok {
-			f.children[child] = &fsfile{
+			f.children[child] = &fsfile{ //nolint:exhaustivestruct
 				name:   child,
 				parent: f,
 			}
@@ -110,7 +110,7 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 		// we can't know if any given file was such a dir-to-non-dir conversion.
 		f.Get(".wh..wh..opq").Set(&tar.Header{
 			Typeflag: tar.TypeReg,
-			Mode:     0644,
+			Mode:     0o644,
 		}, nil)
 	}
 	if f.parent != nil {
@@ -130,7 +130,7 @@ func (f *fsfile) Set(hdr *tar.Header, body []byte) {
 	}
 }
 
-func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
+func (f *fsfile) WriteTo(basedir string, tarWriter *tar.Writer) error {
 	name := path.Join(basedir, f.name)
 
 	if f.header != nil {
@@ -139,10 +139,10 @@ func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
 		}
 		hdr := *f.header // shallow copy
 		hdr.Name = name
-		if err := w.WriteHeader(&hdr); err != nil {
+		if err := tarWriter.WriteHeader(&hdr); err != nil {
 			return err
 		}
-		if _, err := w.Write(f.body); err != nil {
+		if _, err := tarWriter.Write(f.body); err != nil {
 			return err
 		}
 	}
@@ -167,7 +167,7 @@ func (f *fsfile) WriteTo(basedir string, w *tar.Writer) error {
 
 	for _, childName := range childNames {
 		child := f.children[childName]
-		if err := child.WriteTo(name, w); err != nil {
+		if err := child.WriteTo(name, tarWriter); err != nil {
 			return err
 		}
 	}

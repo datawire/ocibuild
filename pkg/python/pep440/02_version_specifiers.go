@@ -79,30 +79,30 @@ func (spec Specifier) Match(ver Version) bool {
 type CmpOp int
 
 const (
-	CmpOp_Compatible CmpOp = iota
-	CmpOp_StrictMatch
-	CmpOp_PrefixMatch
-	CmpOp_StrictExclude
-	CmpOp_PrefixExclude
-	CmpOp_LE
-	CmpOp_GE
-	CmpOp_LT
-	CmpOp_GT
-	//CmpOp_Arbitrary
-	_CmpOp_End
+	CmpOpCompatible CmpOp = iota
+	CmpOpStrictMatch
+	CmpOpPrefixMatch
+	CmpOpStrictExclude
+	CmpOpPrefixExclude
+	CmpOpLE
+	CmpOpGE
+	CmpOpLT
+	CmpOpGT
+	// CmpOpArbitrary
+	_CmpOpEnd
 )
 
 func (op CmpOp) String() string {
 	str, ok := map[CmpOp]string{
-		CmpOp_Compatible:    "~=",
-		CmpOp_StrictMatch:   "strict ==",
-		CmpOp_PrefixMatch:   "prefix ==",
-		CmpOp_StrictExclude: "strict !=",
-		CmpOp_PrefixExclude: "prefix !=",
-		CmpOp_LE:            "<=",
-		CmpOp_GE:            ">=",
-		CmpOp_LT:            "<",
-		CmpOp_GT:            ">",
+		CmpOpCompatible:    "~=",
+		CmpOpStrictMatch:   "strict ==",
+		CmpOpPrefixMatch:   "prefix ==",
+		CmpOpStrictExclude: "strict !=",
+		CmpOpPrefixExclude: "prefix !=",
+		CmpOpLE:            "<=",
+		CmpOpGE:            ">=",
+		CmpOpLT:            "<",
+		CmpOpGT:            ">",
 	}[op]
 	if !ok {
 		panic(fmt.Errorf("invalid CmpOp: %d", op))
@@ -112,15 +112,15 @@ func (op CmpOp) String() string {
 
 func (op CmpOp) match(spec, ver Version) bool {
 	fn, ok := map[CmpOp]func(spec, ver Version) bool{
-		CmpOp_Compatible:    matchCompatible,
-		CmpOp_StrictMatch:   matchStrictMatch,
-		CmpOp_PrefixMatch:   matchPrefixMatch,
-		CmpOp_StrictExclude: matchStrictExclude,
-		CmpOp_PrefixExclude: matchPrefixExclude,
-		CmpOp_LE:            matchLE,
-		CmpOp_GE:            matchGE,
-		CmpOp_LT:            matchLT,
-		CmpOp_GT:            matchGT,
+		CmpOpCompatible:    matchCompatible,
+		CmpOpStrictMatch:   matchStrictMatch,
+		CmpOpPrefixMatch:   matchPrefixMatch,
+		CmpOpStrictExclude: matchStrictExclude,
+		CmpOpPrefixExclude: matchPrefixExclude,
+		CmpOpLE:            matchLE,
+		CmpOpGE:            matchGE,
+		CmpOpLT:            matchLT,
+		CmpOpGT:            matchGT,
 	}[op]
 	if !ok {
 		panic(fmt.Errorf("invalid CmpOp: %d", op))
@@ -141,40 +141,40 @@ func parseSpecifierClause(str string) (SpecifierClause, error) {
 	localOK := false
 	switch {
 	case strings.HasPrefix(str, "~="):
-		ret.CmpOp = CmpOp_Compatible
+		ret.CmpOp = CmpOpCompatible
 		str = str[2:]
 		minSegments = 2
 	case strings.HasPrefix(str, "==") && !strings.HasPrefix(str, "==="):
-		ret.CmpOp = CmpOp_StrictMatch
+		ret.CmpOp = CmpOpStrictMatch
 		str = str[2:]
 		localOK = true
 		if strings.HasSuffix(str, ".*") {
-			ret.CmpOp = CmpOp_PrefixMatch
+			ret.CmpOp = CmpOpPrefixMatch
 			str = strings.TrimSuffix(str, ".*")
 			devOK = false
 			localOK = false
 		}
 	case strings.HasPrefix(str, "!="):
-		ret.CmpOp = CmpOp_StrictExclude
+		ret.CmpOp = CmpOpStrictExclude
 		str = str[2:]
 		localOK = true
 		if strings.HasSuffix(str, ".*") {
-			ret.CmpOp = CmpOp_PrefixExclude
+			ret.CmpOp = CmpOpPrefixExclude
 			str = strings.TrimSuffix(str, ".*")
 			devOK = false
 			localOK = false
 		}
 	case strings.HasPrefix(str, "<="):
-		ret.CmpOp = CmpOp_LE
+		ret.CmpOp = CmpOpLE
 		str = str[2:]
 	case strings.HasPrefix(str, ">="):
-		ret.CmpOp = CmpOp_GE
+		ret.CmpOp = CmpOpGE
 		str = str[2:]
 	case strings.HasPrefix(str, "<"):
-		ret.CmpOp = CmpOp_LT
+		ret.CmpOp = CmpOpLT
 		str = str[2:]
 	case strings.HasPrefix(str, ">"):
-		ret.CmpOp = CmpOp_GT
+		ret.CmpOp = CmpOpGT
 		str = str[2:]
 	case strings.HasPrefix(str, "==="):
 		return ret, fmt.Errorf("specifiers with === are not supported; versions must be PEP 440 compliant")
@@ -201,15 +201,15 @@ func parseSpecifierClause(str string) (SpecifierClause, error) {
 
 func (spec SpecifierClause) String() string {
 	opStr, ok := map[CmpOp]string{
-		CmpOp_Compatible:    "~=",
-		CmpOp_StrictMatch:   "==",
-		CmpOp_PrefixMatch:   "==",
-		CmpOp_StrictExclude: "!=",
-		CmpOp_PrefixExclude: "!=",
-		CmpOp_LE:            "<=",
-		CmpOp_GE:            ">=",
-		CmpOp_LT:            "<",
-		CmpOp_GT:            ">",
+		CmpOpCompatible:    "~=",
+		CmpOpStrictMatch:   "==",
+		CmpOpPrefixMatch:   "==",
+		CmpOpStrictExclude: "!=",
+		CmpOpPrefixExclude: "!=",
+		CmpOpLE:            "<=",
+		CmpOpGE:            ">=",
+		CmpOpLT:            "<",
+		CmpOpGT:            ">",
 	}[spec.CmpOp]
 	if !ok {
 		panic(fmt.Errorf("invalid CmpOp: %d", spec.CmpOp))
@@ -365,6 +365,7 @@ func matchStrictMatch(spec, ver Version) bool {
 	}
 	return spec.Cmp(ver) == 0
 }
+
 func matchPrefixMatch(_spec, _ver Version) bool {
 	spec, ver := _spec.PublicVersion, _ver.PublicVersion
 	const (
@@ -409,7 +410,8 @@ func matchPrefixMatch(_spec, _ver Version) bool {
 	// account .Post and .Dev.
 	if (ver.Pre == nil) != (spec.Pre == nil) {
 		return false
-	} else if spec.Pre != nil && (preReleaseOrder[ver.Pre.L] != preReleaseOrder[spec.Pre.L] || ver.Pre.N != spec.Pre.N) {
+	} else if spec.Pre != nil && (preReleaseOrder[ver.Pre.L] != preReleaseOrder[spec.Pre.L] ||
+		ver.Pre.N != spec.Pre.N) {
 		return false
 	}
 	if terminalPart == partPre {
@@ -452,6 +454,7 @@ func matchPrefixMatch(_spec, _ver Version) bool {
 func matchStrictExclude(spec, ver Version) bool {
 	return !matchStrictMatch(spec, ver)
 }
+
 func matchPrefixExclude(spec, ver Version) bool {
 	return !matchPrefixMatch(spec, ver)
 }
@@ -476,6 +479,7 @@ func matchPrefixExclude(spec, ver Version) bool {
 func matchLE(spec, ver Version) bool {
 	return spec.Cmp(ver) >= 0
 }
+
 func matchGE(spec, ver Version) bool {
 	return spec.Cmp(ver) <= 0
 }
@@ -513,6 +517,7 @@ func matchGE(spec, ver Version) bool {
 func matchLT(spec, ver Version) bool {
 	return spec.Cmp(ver) > 0
 }
+
 func matchGT(spec, ver Version) bool {
 	return spec.Cmp(ver) < 0
 }
@@ -582,7 +587,7 @@ type ExclusionBehavior interface {
 // AllowAll is an implementation of ExclusionBehavior.
 type AllowAll struct{}
 
-func (_ AllowAll) Allow(_ Version) bool {
+func (AllowAll) Allow(_ Version) bool {
 	return true
 }
 

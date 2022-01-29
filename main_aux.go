@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
@@ -22,7 +23,7 @@ func init() {
 		Hidden: true,
 		Use:    "man OUT_DIRECTORY",
 		Short:  "Generate man pages",
-		Args:   cobra.ExactArgs(1),
+		Args:   cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := args[0]
 			if err := os.RemoveAll(dir); err != nil {
@@ -49,7 +50,7 @@ func init() {
 		Hidden: true,
 		Use:    "mddoc OUT_DIRECTORY",
 		Short:  "Generate markdown documentation",
-		Args:   cobra.ExactArgs(1),
+		Args:   cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := args[0]
 			if err := os.RemoveAll(dir); err != nil {

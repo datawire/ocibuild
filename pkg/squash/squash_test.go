@@ -1,14 +1,17 @@
-package squash
+package squash_test
 
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 
 	ociv1 "github.com/google/go-containerregistry/pkg/v1"
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/datawire/ocibuild/pkg/squash"
 )
 
 type TestFile struct {
@@ -20,6 +23,7 @@ type TestFile struct {
 type TestLayer []TestFile
 
 func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
+	t.Helper()
 	var ret TestLayer
 
 	layerReader, err := layer.Uncompressed()
@@ -34,7 +38,7 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 	for {
 		header, err := tarReader.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			t.Fatal(err)
@@ -55,6 +59,7 @@ func ParseTestLayer(t *testing.T, layer ociv1.Layer) TestLayer {
 }
 
 func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
+	t.Helper()
 	var byteWriter bytes.Buffer
 	tarWriter := tar.NewWriter(&byteWriter)
 	for _, file := range tl {
@@ -63,7 +68,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 			Typeflag: file.Type,
 			Linkname: file.Linkname,
 			Size:     0,
-			Mode:     0644,
+			Mode:     0o644,
 		}
 		if err := tarWriter.WriteHeader(header); err != nil {
 			t.Fatal(err)
@@ -87,6 +92,7 @@ func (tl TestLayer) ToLayer(t *testing.T) ociv1.Layer {
 func TestSquash(t *testing.T) {
 	t.Parallel()
 
+	//nolint:lll // big table
 	testcases := map[string]struct {
 		Input  []TestLayer
 		Output TestLayer
@@ -256,7 +262,7 @@ func TestSquash(t *testing.T) {
 				input = append(input, l.ToLayer(t))
 			}
 
-			actual, err := Squash(input)
+			actual, err := squash.Squash(input)
 			if !assert.NoError(t, err) {
 				return
 			}

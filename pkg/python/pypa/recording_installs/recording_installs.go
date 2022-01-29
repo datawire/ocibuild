@@ -1,4 +1,4 @@
-// Package simple_repo_api implementes the PyPA specification Recording installed projects.
+// Package simple_repo_api implements the PyPA specification Recording installed projects.
 //
 // https://packaging.python.org/en/latest/specifications/recording-installed-packages/
 package recording_installs
@@ -7,10 +7,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"encoding/csv"
 	"fmt"
@@ -24,28 +20,10 @@ import (
 	"time"
 
 	"github.com/datawire/ocibuild/pkg/fsutil"
+	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
 	"github.com/datawire/ocibuild/pkg/python/pypa/direct_url"
 )
-
-// hashAlgorithms is specified to match `hashlib.algorithms_guaranteed`.  As of this writing, it is
-// in sync with Pytho 3.9.9 hashlib.
-var hashAlgorithms = map[string]func() hash.Hash{
-	"md5":    md5.New,
-	"sha1":   sha1.New,
-	"sha224": sha256.New224,
-	"sha256": sha256.New,
-	"sha384": sha512.New384,
-	"sha512": sha512.New,
-	// "blake2b":   TODO,
-	// "blake2s":   TODO,
-	// "sha3_224":  TODO,
-	// "sha3_256":  TODO,
-	// "sha3_384":  TODO,
-	// "sha3_512":  TODO,
-	// "shake_128": TODO,
-	// "shake_256": TODO,
-}
 
 const defaultHashAlgorithm = "sha256"
 
@@ -79,7 +57,12 @@ func recordFile(file fsutil.FileReference, hashName string, hasher hash.Hash, ba
 }
 
 func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.PostInstallHook {
-	return func(ctx context.Context, clampTime time.Time, vfs map[string]fsutil.FileReference, installedDistInfoDir string) error {
+	return func(
+		ctx context.Context,
+		clampTime time.Time,
+		vfs map[string]fsutil.FileReference,
+		installedDistInfoDir string,
+	) error {
 		// 1. The .dist-info directory
 
 		// Trust the wheel to have the correct .dist-info dir.
@@ -93,7 +76,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		header := &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     path.Join(installedDistInfoDir, "INSTALLER"),
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(len(content)),
 			ModTime:  clampTime,
 		}
@@ -115,7 +98,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		if hashName == "" {
 			hashName = defaultHashAlgorithm
 		}
-		newHasher, ok := hashAlgorithms[hashName]
+		newHasher, ok := python.HashlibAlgorithmsGuaranteed[hashName]
 		if !ok {
 			return fmt.Errorf("recording-installed-packages: unsupported hash algorithm: %q", hashName)
 		}
@@ -129,7 +112,8 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 			}
 			row, err := recordFile(file, hashName, hasher, path.Dir(installedDistInfoDir))
 			if err != nil {
-				return fmt.Errorf("recording installed-packaged: recording file %q: %w", file.FullName(), err)
+				return fmt.Errorf("recording installed-packaged: recording file %q: %w",
+					file.FullName(), err)
 			}
 			csvData = append(csvData, row)
 		}
@@ -149,7 +133,7 @@ func Record(hashName, installer string, urlData *direct_url.DirectURL) bdist.Pos
 		header = &tar.Header{
 			Typeflag: tar.TypeReg,
 			Name:     path.Join(installedDistInfoDir, "RECORD"),
-			Mode:     0644,
+			Mode:     0o644,
 			Size:     int64(recordBytes.Len()),
 			ModTime:  clampTime,
 		}

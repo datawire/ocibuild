@@ -13,7 +13,12 @@ import (
 	"github.com/datawire/ocibuild/pkg/dir"
 )
 
-func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, opts ...ociv1tarball.LayerOption) (_ ociv1.Layer, err error) {
+func LayerFromGo(
+	ctx context.Context,
+	clampTime time.Time,
+	pkgnames []string,
+	opts ...ociv1tarball.LayerOption,
+) (_ ociv1.Layer, err error) {
 	maybeSetErr := func(_err error) {
 		if _err != nil && err == nil {
 			err = _err
@@ -29,10 +34,12 @@ func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, op
 	}()
 
 	// TODO(lukeshu): Call or mimic code from Ko in order to figure out multi-arch support.
-	args := append([]string{"go", "build",
+	args := append([]string{
+		"go", "build",
 		"-trimpath",
 		"-o", tmpdir,
-		"--"}, pkgnames...)
+		"--",
+	}, pkgnames...)
 	cmd := dexec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
@@ -46,7 +53,11 @@ func LayerFromGo(ctx context.Context, clampTime time.Time, pkgnames []string, op
 
 	return dir.LayerFromDir(tmpdir, &dir.Prefix{
 		DirName: "usr/local/bin",
-		UName:   "root",
-		GName:   "root",
+		Mode:    0, // default
+
+		UID:   0,
+		UName: "root",
+		GID:   0,
+		GName: "root",
 	}, clampTime, opts...)
 }

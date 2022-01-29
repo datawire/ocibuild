@@ -11,13 +11,13 @@ import (
 )
 
 func PathOpener(filename string) ociv1tarball.Opener {
-	fi, err := os.Stat(filename)
+	fileinfo, err := os.Stat(filename)
 	if err != nil {
 		return func() (io.ReadCloser, error) {
 			return nil, err
 		}
 	}
-	if fi.Mode().IsRegular() {
+	if fileinfo.Mode().IsRegular() {
 		// Open the file for each access.  This does not work on pipes.
 		return func() (io.ReadCloser, error) {
 			file, err := os.Open(filename)
@@ -26,16 +26,15 @@ func PathOpener(filename string) ociv1tarball.Opener {
 			}
 			return file, nil
 		}
-	} else {
-		// Read the file in to memory once, and then work on that.  This avoids extra IO,
-		// but uses more memory.
-		bs, err := os.ReadFile(filename)
-		return func() (io.ReadCloser, error) {
-			if err != nil {
-				return nil, err
-			}
-			return io.NopCloser(bytes.NewReader(bs)), nil
+	}
+	// Read the file in to memory once, and then work on that.  This avoids extra IO,
+	// but uses more memory.
+	bs, err := os.ReadFile(filename)
+	return func() (io.ReadCloser, error) {
+		if err != nil {
+			return nil, err
 		}
+		return io.NopCloser(bytes.NewReader(bs)), nil
 	}
 }
 

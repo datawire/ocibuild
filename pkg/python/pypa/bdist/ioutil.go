@@ -3,6 +3,7 @@ package bdist
 import (
 	"archive/tar"
 	"archive/zip"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -19,19 +20,19 @@ type skipReader struct {
 	inner io.Reader
 }
 
-func (r *skipReader) Read(p []byte) (int, error) {
+func (r *skipReader) Read(buf []byte) (int, error) {
 	if r.skip > 0 {
 		buff := make([]byte, r.skip)
 		n, err := io.ReadFull(r.inner, buff)
 		r.skip -= n
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
 			}
 			return 0, err
 		}
 	}
-	return r.inner.Read(p)
+	return r.inner.Read(buf)
 }
 
 type readCloser struct {
@@ -63,7 +64,7 @@ func rename(vfs map[string]fsutil.FileReference, oldpath, newpath string) error 
 			Err: os.ErrNotExist,
 		}
 	}
-	isDir := ref.IsDir()
+	isDir := ref.IsDir() //nolint:ifshort // gotta do this before setting .header.Name
 	ref.(*zipEntry).header.Name = newpath
 	if isDir {
 		ref.(*zipEntry).header.Name += "/"
@@ -82,12 +83,13 @@ func create(vfs map[string]fsutil.FileReference, mtime time.Time, name string, c
 
 	// Discard all permission info except the "execute" bit.
 	var externalAttrs python.ZIPExternalAttributes
-	if isDir {
-		externalAttrs.UNIX = python.ModeFmtDir | 0755
-	} else if isExecutable(content.header) {
-		externalAttrs.UNIX = python.ModeFmtRegular | 0755
-	} else {
-		externalAttrs.UNIX = python.ModeFmtRegular | 0644
+	switch {
+	case isDir:
+		externalAttrs.UNIX = python.ModeFmtDir | 0o755
+	case isExecutable(content.header):
+		externalAttrs.UNIX = python.ModeFmtRegular | 0o755
+	default:
+		externalAttrs.UNIX = python.ModeFmtRegular | 0o644
 	}
 	content.header.CreatorVersion = 3 << 8 // force Creator=UNIX
 	content.header.ExternalAttrs = externalAttrs.Raw()
@@ -114,15 +116,15 @@ func (f *tarEntry) IsDir() bool                  { return f.header.FileInfo().Is
 func (f *tarEntry) Sys() interface{}             { return f.header }
 func (f *tarEntry) Open() (io.ReadCloser, error) { return f.open() }
 
-func newTarEntry(in fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
-	header, err := tar.FileInfoHeader(in, "")
+func newTarEntry(inFile fsutil.FileReference, fn func(*tar.Header)) (fsutil.FileReference, error) {
+	header, err := tar.FileInfoHeader(inFile, "")
 	if err != nil {
 		return nil, err
 	}
-	header.Name = in.FullName()
+	header.Name = inFile.FullName()
 	fn(header)
 	return &tarEntry{
 		header: header,
-		open:   in.Open,
+		open:   inFile.Open,
 	}, nil
 }

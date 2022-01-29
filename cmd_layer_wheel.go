@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/fsutil"
 	"github.com/datawire/ocibuild/pkg/python"
 	"github.com/datawire/ocibuild/pkg/python/pypa/bdist"
@@ -59,9 +60,8 @@ func init() {
 			"YAML description of it.\n" +
 			"\n" +
 			"LIMITATION: While checksums are verified, signatures are not.",
-		Args: cobra.ExactArgs(1),
+		Args: cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),
 		RunE: func(flags *cobra.Command, args []string) error {
-
 			yamlBytes, err := os.ReadFile(platFile)
 			if err != nil {
 				return err

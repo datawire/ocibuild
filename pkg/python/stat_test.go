@@ -10,8 +10,9 @@ import (
 )
 
 func TestStatModeString(t *testing.T) {
-	fn := func(m python.StatMode) bool {
-		if m&python.ModeFmt == python.ModeFmtWhiteout {
+	t.Parallel()
+	fn := func(mode python.StatMode) bool {
+		if mode&python.ModeFmt == python.ModeFmtWhiteout {
 			// S_IFWHT isn't defined on all platforms (it is on macOS, but not on
 			// Linux), and so whether Python's _stat.c:filetype() will return 'w' or '?'
 			// for it varies by platform.  But we don't want the Go code's behavior to
@@ -19,10 +20,13 @@ func TestStatModeString(t *testing.T) {
 			return true
 		}
 
-		act := m.String()
+		act := mode.String()
+
+		// #nosec G204 -- it's perfectly safe to insert an integer
 		exp, _ := exec.Command("python3", "-c",
-			fmt.Sprintf(`import stat; print(stat.filemode(%d), end="")`, m)).
+			fmt.Sprintf(`import stat; print(stat.filemode(%d), end="")`, mode)).
 			Output()
+
 		return act == string(exp)
 	}
 	if err := quick.Check(fn, nil); err != nil {

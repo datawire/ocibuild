@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//nolint:gochecknoglobals // this needs to be global
 var (
 	nowOnce sync.Once
 	now     time.Time

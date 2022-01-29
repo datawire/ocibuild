@@ -10,6 +10,7 @@ import (
 	ociv1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
 
+	"github.com/datawire/ocibuild/pkg/cliutil"
 	"github.com/datawire/ocibuild/pkg/fsutil"
 )
 
@@ -21,7 +22,7 @@ func init() {
 	cmd := &cobra.Command{
 		Use:   "build [flags] IN_LAYERFILES... >OUT_IMAGEFILE",
 		Short: "Combine layers in to a complete image",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cliutil.WrapPositionalArgs(cobra.MinimumNArgs(1)),
 		RunE: func(flags *cobra.Command, args []string) error {
 			base := empty.Image
 			if argBase != "" {
