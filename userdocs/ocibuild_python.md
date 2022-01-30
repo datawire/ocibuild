@@ -16,4 +16,5 @@ ocibuild python {[flags]|SUBCOMMAND...}
 
 * [ocibuild](ocibuild.md)	 - Manipulate OCI/Docker images and layers as regular files
 * [ocibuild python getwheel](ocibuild_python_getwheel.md)	 - Download a wheel file from the Python Package Index
+* [ocibuild python inspect](ocibuild_python_inspect.md)	 - Dump information about a Python environment
 

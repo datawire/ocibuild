@@ -8,6 +8,9 @@ Given a Python wheel file, transform it in to a layer.
 
 In order to transform the wheel in to a layer, ocibuild needs to know a few things about the target environment.  You must supply this to ocibuild using the --platform-file flag, pointing it at a YAML file that is as follows:
 
+    # This entire file can be generated with the `ocibuild python inspect`
+    # command.
+
     # file locations
     ConsoleShebang: /usr/bin/python3.9
     GraphicalShebang: /usr/bin/python3.9
@@ -34,8 +37,6 @@ In order to transform the wheel in to a layer, ocibuild needs to know a few thin
     # version number rather precisely; or rather their
     # `importlib.util.MAGIC_NUMBER` values must match.
     PyCompile: ['python3.9', '-m', 'compileall']
-
-LIMITATION: It is 'TODO' to create an 'ocibuild python WHATEVER' command that can inspect an image's Python installation and emit the appropriate YAML description of it.
 
 LIMITATION: While checksums are verified, signatures are not.
 

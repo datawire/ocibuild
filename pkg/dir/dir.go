@@ -102,7 +102,7 @@ func LayerFromDir(
 				break
 			}
 		}
-		if header.Typeflag == tar.TypeLink {
+		if header.Typeflag == tar.TypeSymlink {
 			header.Linkname, err = os.Readlink(filename)
 			if err != nil {
 				return err

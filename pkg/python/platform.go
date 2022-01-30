@@ -3,6 +3,9 @@ package python
 import (
 	"fmt"
 	"path/filepath"
+
+	"github.com/datawire/ocibuild/pkg/python/pep425"
+	"github.com/datawire/ocibuild/pkg/python/pep440"
 )
 
 type Platform struct {
@@ -16,7 +19,42 @@ type Platform struct {
 	UName string
 	GName string
 
-	PyCompile Compiler `json:"-"`
+	VersionInfo *VersionInfo
+	MagicNumber []byte
+	Tags        pep425.Installer
+
+	PyCompile Compiler `json:"-" yaml:"-"`
+}
+
+type VersionInfo struct {
+	Major        int    `json:"major"`
+	Minor        int    `json:"minor"`
+	Micro        int    `json:"micro"`
+	ReleaseLevel string `json:"releaselevel"` // 'alpha', 'beta', 'candidate', or 'final'
+	Serial       int    `json:"serial"`
+}
+
+func (vi VersionInfo) PEP440() (*pep440.Version, error) {
+	var ret pep440.Version
+	ret.Release = []int{
+		vi.Major,
+		vi.Minor,
+		vi.Micro,
+	}
+	switch vi.ReleaseLevel {
+	case "alpha":
+		ret.Pre = &pep440.PreRelease{L: "a", N: 0}
+	case "beta":
+		ret.Pre = &pep440.PreRelease{L: "b", N: 0}
+	case "candidate":
+		ret.Pre = &pep440.PreRelease{L: "rc", N: 0}
+	case "final":
+		ret.Pre = nil
+	default:
+		return nil, fmt.Errorf("python.VersionInfo.PEP440: invalid version_info.releaselevel: %q",
+			vi.ReleaseLevel)
+	}
+	return &ret, nil
 }
 
 type Scheme struct {
@@ -30,6 +68,7 @@ type Scheme struct {
 	Data    string `json:"data"`    // "/usr"
 }
 
+// Init normalizes the shebangs and validates that the scheme has absolute paths.
 func (plat *Platform) Init() error {
 	if plat.ConsoleShebang == "" && plat.GraphicalShebang == "" {
 		return fmt.Errorf("Platform specification does not specify a path to use for shebangs")

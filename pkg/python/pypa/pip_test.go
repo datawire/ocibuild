@@ -149,6 +149,10 @@ print(json.dumps({slot: getattr(scheme, slot) for slot in scheme.__slots__}))
 		UName:            usr.Username,
 		GName:            grp.Name,
 		PyCompile:        compiler,
+
+		VersionInfo: nil,
+		MagicNumber: nil,
+		Tags:        nil,
 	}, nil
 }
 

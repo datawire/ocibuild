@@ -28,6 +28,9 @@ func init() {
 			"ocibuild using the --platform-file flag, pointing it at a YAML file that " +
 			"is as follows:" +
 			"\n\n" +
+			"    # This entire file can be generated with the `ocibuild python inspect`\n" +
+			"    # command.\n" +
+			"\n" +
 			"    # file locations\n" +
 			"    ConsoleShebang: /usr/bin/python3.9\n" +
 			"    GraphicalShebang: /usr/bin/python3.9\n" +
@@ -54,10 +57,6 @@ func init() {
 			"    # version number rather precisely; or rather their\n" +
 			"    # `importlib.util.MAGIC_NUMBER` values must match.\n" +
 			"    PyCompile: ['python3.9', '-m', 'compileall']\n" +
-			"\n" +
-			"LIMITATION: It is 'TODO' to create an 'ocibuild python WHATEVER' command " +
-			"that can inspect an image's Python installation and emit the appropriate " +
-			"YAML description of it.\n" +
 			"\n" +
 			"LIMITATION: While checksums are verified, signatures are not.",
 		Args: cliutil.WrapPositionalArgs(cobra.ExactArgs(1)),

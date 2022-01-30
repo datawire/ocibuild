@@ -851,7 +851,7 @@ func (wh *wheel) integrityCheck() error {
 		return err
 	}
 
-	checkFile := func(filename, algo string) (hash string, size int, err error) {
+	checkFile := func(filename, algo string) (hashsum string, size int64, err error) {
 		reader, err := wh.Open(filename)
 		if err != nil {
 			return "", 0, err
@@ -859,21 +859,30 @@ func (wh *wheel) integrityCheck() error {
 		defer func() {
 			_ = reader.Close()
 		}()
-		bs, err := io.ReadAll(reader)
-		if err != nil {
-			return "", 0, err
-		}
-		size = len(bs)
+
+		var (
+			hasher hash.Hash
+			dst    = io.Discard
+		)
 		if algo != "" {
 			newHasher, ok := strongHashes[algo]
 			if !ok {
 				return "", 0, fmt.Errorf("unsupported hash algorithm: %q", algo)
 			}
-			hasher := newHasher()
-			_, _ = hasher.Write(bs)
-			hash = algo + "=" + base64.RawURLEncoding.EncodeToString(hasher.Sum(nil))
+			hasher = newHasher()
+			dst = hasher
 		}
-		return hash, size, err
+
+		size, err = io.Copy(dst, reader)
+		if err != nil {
+			return "", 0, err
+		}
+
+		if hasher != nil {
+			hashsum = algo + "=" + base64.RawURLEncoding.EncodeToString(hasher.Sum(nil))
+		}
+
+		return hashsum, size, err
 	}
 
 	var errs derror.MultiError
@@ -882,9 +891,9 @@ func (wh *wheel) integrityCheck() error {
 			errs = append(errs, fmt.Errorf("RECORD row %d: does not have 3 columns: %q", i, row))
 			continue
 		}
-		name, hash, size := path.Clean(row[0]), row[1], row[2]
+		name, recHashsum, recSize := path.Clean(row[0]), row[1], row[2]
 		delete(todo, name)
-		if hash == "" || size == "" {
+		if recHashsum == "" || recSize == "" {
 			switch name {
 			case path.Join(distInfoDir, "RECORD"):
 				// skip
@@ -893,20 +902,20 @@ func (wh *wheel) integrityCheck() error {
 			}
 		}
 
-		algo := strings.SplitN(hash, "=", 2)[0]
-		actHash, actSize, err := checkFile(name, algo)
+		algo := strings.SplitN(recHashsum, "=", 2)[0]
+		actHashsum, actSize, err := checkFile(name, algo)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: %w",
 				i, name, err))
 			continue
 		}
-		if hash != "" && actHash != hash {
+		if recHashsum != "" && actHashsum != recHashsum {
 			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: checksum mismatch: RECORD=%q actual=%q",
-				i, name, hash, actHash))
+				i, name, recHashsum, actHashsum))
 		}
-		if size != "" && strconv.Itoa(actSize) != size {
+		if recSize != "" && strconv.FormatInt(actSize, 10) != recSize {
 			errs = append(errs, fmt.Errorf("RECORD row %d: file %q: size mismatch: RECORD=%s actual=%d",
-				i, name, size, actSize))
+				i, name, recSize, actSize))
 		}
 	}
 
