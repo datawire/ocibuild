@@ -37,8 +37,13 @@ userdocs: $(name) main_aux.go
 
 # Generate
 
-generate: userdocs
+generate: userdocs go-mod-tidy
 .PHONY: generate
+
+go-mod-tidy:
+	go mod tidy
+	go mod vendor
+.PHONY: go-mod-tidy
 
 # Install
 
