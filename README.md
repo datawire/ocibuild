@@ -71,7 +71,7 @@ sure :P
 ```bash
 crane push \
   <(ocibuild image build \
-      --entrypoint=/usr/local/bin/go-program-that-calls-python \
+      --config.Entrypoint=/usr/local/bin/go-program-that-calls-python \
       --base=<(crane pull docker.io/alpine:latest /dev/stdout) \
       <(ocibuild layer squash \
           <(ocibuild layer wheel --platform-file=python.yml <(curl https://files.pythonhosted.org/packages/af/f4/524415c0744552cce7d8bf3669af78e8a069514405ea4fcbd0cc44733744/urllib3-1.26.7-py2.py3-none-any.whl)) \
@@ -95,7 +95,7 @@ more like
 ```Makefile
 ocibuild-example.img.tar: $(tools/ocibuild) base.img.tar python-deps.layer.tar my-code.layer.tar
 	{ $(tools/ocibuild) image build \
-	  --entrypoint=/usr/local/bin/go-program-that-calls-python \
+	  --config.Entrypoint=/usr/local/bin/go-program-that-calls-python \
 	  --base=$(filter %.img.tar,$^) \
 	  $(filter %.layer.tar,$^); } >$@
 
@@ -138,7 +138,7 @@ docker push docker.io/datawire/ocibuild-example:latest
 ```bash
 ocibuild image build \
   --tag=docker.io/datawire/ocibuild-example:latest \
-  --entrypoint=/usr/local/bin/go-program \
+  --config.Cmd=/usr/local/bin/go-program \
   --base=<(crane pull gcr.io/distroless/static:nonroot) \
   <(ocibuild layer gobuild ./cmd/go-program) \
   | docker load

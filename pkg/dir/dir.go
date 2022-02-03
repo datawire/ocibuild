@@ -20,6 +20,10 @@ type Prefix struct {
 
 	Mode int
 
+	Ownership
+}
+
+type Ownership struct {
 	UID   int
 	UName string
 
@@ -30,6 +34,7 @@ type Prefix struct {
 func LayerFromDir(
 	dirname string,
 	prefix *Prefix,
+	chown *Ownership,
 	clampTime time.Time,
 	opts ...ociv1tarball.LayerOption,
 ) (ociv1.Layer, error) {
@@ -119,6 +124,20 @@ func LayerFromDir(
 		}
 		if err := tarWriter.WriteHeader(header); err != nil {
 			return err
+		}
+		if chown != nil {
+			if chown.UID >= 0 {
+				header.Uid = chown.UID
+			}
+			if chown.UName != "" {
+				header.Uname = chown.UName
+			}
+			if chown.GID >= 0 {
+				header.Gid = chown.GID
+			}
+			if chown.GName != "" {
+				header.Gname = chown.GName
+			}
 		}
 		if header.Typeflag == tar.TypeReg {
 			reader, err := os.Open(filename)

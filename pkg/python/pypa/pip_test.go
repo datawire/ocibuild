@@ -85,11 +85,14 @@ func pipInstall(ctx context.Context, destDir, wheelFile string) (ociv1.Layer, er
 			DirName: layerPrefix,
 			Mode:    0, // default
 
-			UID:   os.Getuid(),
-			GID:   os.Getgid(),
-			UName: usr.Username,
-			GName: grp.Name,
+			Ownership: dir.Ownership{
+				UID:   os.Getuid(),
+				GID:   os.Getgid(),
+				UName: usr.Username,
+				GName: grp.Name,
+			},
 		},
+		nil, // use actual file's ownership
 		reproducible.Now(),
 	)
 }

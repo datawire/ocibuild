@@ -51,13 +51,15 @@ func LayerFromGo(
 		return nil, err
 	}
 
-	return dir.LayerFromDir(tmpdir, &dir.Prefix{
-		DirName: "usr/local/bin",
-		Mode:    0, // default
-
+	ownership := dir.Ownership{
 		UID:   0,
 		UName: "root",
 		GID:   0,
 		GName: "root",
-	}, clampTime, opts...)
+	}
+	return dir.LayerFromDir(tmpdir, &dir.Prefix{
+		DirName:   "usr/local/bin",
+		Mode:      0, // default
+		Ownership: ownership,
+	}, &ownership, clampTime, opts...)
 }

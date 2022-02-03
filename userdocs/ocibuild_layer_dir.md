@@ -9,6 +9,10 @@ ocibuild layer dir [flags] IN_DIRNAME >OUT_LAYERFILE
 ### Options
 
 ```
+      --chown-gid GID         Force the numeric group ID of read files to be GID; use a value <0 to use the actual GID (default -1)
+      --chown-gname gname     Force symbolic group name of the read files to be gname; an empty value uses the actual group name (default "root")
+      --chown-uid UID         Force the numeric user ID of read files to be UID; a value of <0 uses the actual UID (default -1)
+      --chown-uname uname     Force symbolic user name of the read files to be uname; an empty value uses the user name
   -h, --help                  help for dir
       --prefix PREFIX         Add a PREFIX to the filenames in the directory, should be forward-slash separated and should be absolute but NOT starting with a slash.  For example, "usr/local/bin".
       --prefix-gid int        The numeric group ID of the --prefix directory
