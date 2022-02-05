@@ -35,8 +35,8 @@ func DumpLayerFull(layer ociv1.Layer) (str string, err error) {
 
 	ret := new(strings.Builder)
 
-	layerReader, _err := layer.Uncompressed()
-	if _err != nil {
+	layerReader, err := layer.Uncompressed()
+	if err != nil {
 		return "", err
 	}
 	defer func() {
@@ -90,8 +90,8 @@ func DumpLayerListing(layer ociv1.Layer) (str string, err error) {
 
 	ret := new(strings.Builder)
 
-	layerReader, _err := layer.Uncompressed()
-	if _err != nil {
+	layerReader, err := layer.Uncompressed()
+	if err != nil {
 		return "", err
 	}
 	defer func() {
