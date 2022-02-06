@@ -24,6 +24,7 @@ jobs:
           pip3 --version
       - run: make check
       - name: Report test coverage to coveralls.io
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/master' }}
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
