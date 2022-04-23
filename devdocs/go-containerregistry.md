@@ -43,7 +43,9 @@ go-containerregistry uses
      + `./pkg/v1/remote`: In a remote Docker registry
         - `./pkg/v1/remote/transport`
      + `./pkg/v1/layout`: As a directory on a filesystem
-     + `./pkg/v1/tarball`: As a tarball
+     + `./pkg/v1/tarball`: As a tarball... but this isn't actually an
+       OCI thing, this is a `docker load` thing; see
+       [fileformats.md](./fileformats.md).
 
     Plus some utilities for testing:
 
