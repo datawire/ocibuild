@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package bdist implements the PyPA Binary distribution format (AKA PEP 427 -- The Wheel Binary
 // Package Format 1.0).
 //

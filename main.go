@@ -1,3 +1,7 @@
+// Copyright (C) 2020-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Command ocibuild deals with manipulation of OCI/Docker images and layers as regular files.
 package main
 

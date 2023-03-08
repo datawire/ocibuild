@@ -1,3 +1,7 @@
+// Copyright (C) 2020-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep425 implements PEP 425 -- Database of Installed Python Distributions.
 //
 // https://www.python.org/dev/peps/pep-0425/

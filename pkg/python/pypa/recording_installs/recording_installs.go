@@ -1,3 +1,7 @@
+// Copyright (C) 2021-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package simple_repo_api implements the PyPA specification Recording installed projects.
 //
 // https://packaging.python.org/en/latest/specifications/recording-installed-packages/

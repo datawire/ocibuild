@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package entry_points implements the PyPA Entry points specification.
 //
 // https://packaging.python.org/en/latest/specifications/entry-points/

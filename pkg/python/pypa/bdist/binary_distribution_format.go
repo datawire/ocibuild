@@ -1,3 +1,7 @@
+// Copyright (C) 2021-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // This file contains as comments the full text of
 // https://github.com/pypa/packaging.python.org/blob/main/source/specifications/binary-distribution-format.rst,
 // which has been placed in to the public domain.

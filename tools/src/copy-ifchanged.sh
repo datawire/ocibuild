@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Copyright 2019 Datawire. All rights reserved.
+# Copyright (C) 2019  Ambassador Labs
+#
+# SPDX-License-Identifier: Apache-2.0
 
 if ! cmp -s "$1" "$2"; then
 	if [[ -n "$CI" && -e "$2" ]]; then

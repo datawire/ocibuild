@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package cliutil
 
 // Wrap the string `s` to a maximum width `w`.  Pass `w` == 0 to do no wrapping.

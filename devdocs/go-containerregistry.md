@@ -1,3 +1,9 @@
+<!--
+  Copyright (C) 2021  Ambassador Labs
+
+  SPDX-License-Identifier: Apache-2.0
+-->
+
 # Overview of go-containerregistry
 
 `ocibuild` makes uses of the `github.com/google/go-containerregistry`

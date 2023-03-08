@@ -1,3 +1,7 @@
+// Copyright (C) 2021-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // vfs_fs.go is an adapter for the virtual filesystem in vfs.go that adapts it to implement the
 // (read-only) stdlib io/fs.FS interface.
 
