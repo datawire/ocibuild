@@ -1,3 +1,11 @@
+// Copyright (C) 2020  Ambassador Labs (for Telepresence)
+// Copyright (C) 2021  Ambassador Labs (for ocibuild)
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Based on
+// https://github.com/telepresenceio/telepresence/blob/b6dfa04ff014915b47386191cc3d8b1352522fea/pkg/client/cli/command_group.go#L35-L63
+
 package cliutil
 
 import (
