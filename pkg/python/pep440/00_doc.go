@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep440 implements PEP 440 -- Version Identification and Dependency Specification.
 //
 // https://www.python.org/dev/peps/pep-0440/

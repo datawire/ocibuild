@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep376 implements the REQUESTED metadata of PEP 375 -- Database of Installed Python
 // Distributions.
 //

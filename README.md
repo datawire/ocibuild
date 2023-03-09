@@ -1,3 +1,9 @@
+<!--
+  Copyright (C) 2021-2022  Ambassador Labs
+
+  SPDX-License-Identifier: Apache-2.0
+-->
+
 # ocibuild
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/datawire/ocibuild)](https://pkg.go.dev/github.com/datawire/ocibuild/pkg)

@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // This file mimics `configparser.py`.
 
 package python

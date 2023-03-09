@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package direct_url //nolint:testpackage // testing an internal thing
 
 import (

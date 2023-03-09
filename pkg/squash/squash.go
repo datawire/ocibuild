@@ -1,3 +1,7 @@
+// Copyright (C) 2020-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package squash deals with squashing multiple layers together in to a single layer.
 //
 // https://github.com/opencontainers/image-spec/blob/main/layer.md

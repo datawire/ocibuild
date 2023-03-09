@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep345 implements PEP 345 -- Metadata for Python Software Packages 1.2.
 //
 // Well, just enough of PEP 345 to implement PEP 503.

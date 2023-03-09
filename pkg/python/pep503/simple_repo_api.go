@@ -1,3 +1,7 @@
+// Copyright (C) 2021-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep503 implements PEP 503 -- Simple Repository API.
 //
 // https://www.python.org/dev/peps/pep-0503/

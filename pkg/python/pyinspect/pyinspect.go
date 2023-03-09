@@ -1,3 +1,7 @@
+// Copyright (C) 2021-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pyinspect determines information about a Python environment.
 package pyinspect
 

@@ -1,3 +1,7 @@
+// Copyright (C) 2020-2022  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 module github.com/datawire/ocibuild
 
 go 1.17

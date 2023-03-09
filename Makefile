@@ -1,3 +1,8 @@
+# Copyright (C) 2021-2022  Ambassador Labs
+# Copyright (C) 2023  Luke Shumaker <lukeshu@lukeshu.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Configuration
 
 DESTDIR     ?=
@@ -37,8 +42,24 @@ userdocs: $(name) main_aux.go
 
 # Generate
 
-generate: userdocs go-mod-tidy
+generate/files  = userdocs
+generate/files += LICENSE.txt
+generate/files += pkg/cliutil/LICENSE.pflag.txt
+
+generate:
+	$(MAKE) generate-clean
+	$(MAKE) $(generate/files)
+	$(MAKE) go-mod-tidy
 .PHONY: generate
+
+generate-clean:
+	rm -rf $(generate/files)
+.PHONY: generate-clean
+
+LICENSE.txt:
+	curl https://apache.org/licenses/LICENSE-2.0.txt >$@
+pkg/cliutil/LICENSE.pflag.txt:
+	curl https://raw.githubusercontent.com/spf13/pflag/ad68c28ee799163e627e77fcc6e8ecaa866e3535/LICENSE >$@
 
 go-mod-tidy:
 	go mod tidy

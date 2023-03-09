@@ -1,3 +1,8 @@
+# Copyright (C) 2021-2022  Ambassador Labs
+# Copyright (C) 2023  Luke Shumaker <lukeshu@lukeshu.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 linters:
   enable-all: true
   disable:
@@ -90,11 +95,15 @@ linters-settings:
       - 'b'
 issues:
   exclude-rules:
-    ## Problematic lnters ############################################
+    ## Problematic linters ###########################################
 
     - # Buggy linter; false positives
       linters: [paralleltest]
       text: "Range statement for test .* does not use range value in test Run"
+
+    - # URLs can be long
+      linters: [lll]
+      source: '^\t*// https://\S*$'
 
     ## Personal exceptions ##########################################
 

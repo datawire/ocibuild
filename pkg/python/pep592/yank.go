@@ -1,3 +1,7 @@
+// Copyright (C) 2021  Ambassador Labs
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pep592 implements PEP 592 -- Adding "Yank" Support to the Simple API.
 //
 // https://www.python.org/dev/peps/pep-0592/
