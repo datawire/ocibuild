@@ -34,11 +34,7 @@ func recordFile(file fsutil.FileReference, hashName string, hasher hash.Hash, ba
 	}
 	name := filepath.ToSlash(fpName)
 	var hash, size string
-	if rfile, ok := file.(bdist.Recordable); ok {
-		var _size int64
-		hash, _size = rfile.Record()
-		size = strconv.FormatInt(_size, 10)
-	} else if !strings.HasSuffix(name, ".pyc") {
+	if !strings.HasSuffix(name, ".pyc") {
 		hasher.Reset()
 		reader, err := file.Open()
 		if err != nil {
